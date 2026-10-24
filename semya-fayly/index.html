@@ -1,0 +1,1322 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta property="og:title" content="Музей нашей семьи">
+<meta property="og:description" content="Семь залов, фото и песня для каждого из нас">
+<title>Музей нашей семьи</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Prata&family=Caveat:wght@500;700&family=Manrope:wght@400;500;700&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+
+/* Layout: full-screen 3D gallery, quiet museum UI floating over it like printed wall labels */
+:root{
+  --paper:#fbf8f4;
+  --ink:#232a2a;
+  --muted:#6b7372;
+  --accent:#1d5c57;
+  --accent-soft:#e2eeeb;
+  --gold:#b98328;
+  --gold-soft:#f5e8cf;
+  --line:rgba(35,42,42,.14);
+  --glass:rgba(251,248,244,.86);
+  --shade:rgba(22,38,36,.40);
+  --display:"Prata","Georgia","Times New Roman",serif;
+  --body:"Manrope","Segoe UI",system-ui,sans-serif;
+  --hand:"Caveat","Segoe Print","Comic Sans MS",cursive;
+  color-scheme:light;
+}
+[hidden]{display:none!important}
+.ticket,.card,.letter,.playlist,.note-card,.panel{box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:15px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  -webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+#scene{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;background:var(--paper)}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+.hud{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:max(14px,env(safe-area-inset-left,0px));right:max(14px,env(safe-area-inset-right,0px));
+  display:flex;justify-content:space-between;align-items:flex-start;gap:10px;pointer-events:none;z-index:5}
+.chip{pointer-events:auto;background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:13px;display:flex;gap:10px;align-items:center}
+.chip b{font-family:var(--display);font-weight:400;font-size:14px}
+.chip .dots{display:flex;gap:4px}
+.chip .dots i{width:7px;height:7px;border-radius:50%;background:var(--line)}
+.chip .dots i.on{background:var(--accent)}
+
+.bottom{position:fixed;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:center;gap:10px;pointer-events:none;z-index:5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.bottom > *{pointer-events:auto}
+.cta{background:var(--accent);color:#fff;border:0;border-radius:999px;padding:13px 22px;font-weight:700;font-size:15px;box-shadow:0 8px 24px rgba(29,92,87,.28);max-width:100%;text-wrap:balance}
+.ghost{background:var(--glass);border:1px solid var(--line);border-radius:999px;padding:10px 18px;font-size:14px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+#hint{font-size:13px;color:var(--muted);background:var(--glass);border-radius:999px;padding:7px 14px;text-align:center;max-width:100%;transition:opacity .6s}
+/* touch: keep the action buttons clear of the joystick in the bottom-left corner */
+body.coarse .bottom > button{align-self:flex-end;max-width:calc(100% - 132px)}
+body.coarse #hint{border-radius:14px}
+#toast{position:fixed;top:calc(64px + env(safe-area-inset-top,0px));left:50%;transform:translate(-50%,-8px);opacity:0;transition:.4s;z-index:6;
+  background:var(--ink);color:var(--paper);border-radius:14px;padding:11px 16px;font-size:14px;max-width:min(420px,calc(100% - 32px));width:max-content;text-align:center;pointer-events:none}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+
+#joy{position:fixed;left:calc(24px + env(safe-area-inset-left,0px));bottom:calc(84px + env(safe-area-inset-bottom,0px));width:104px;height:104px;border-radius:50%;
+  background:rgba(251,248,244,.55);border:1px solid var(--line);z-index:5;touch-action:none}
+#knob{position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;background:var(--paper);border:1px solid var(--line);box-shadow:0 2px 8px rgba(0,0,0,.12)}
+
+/* overlays */
+.veil{position:fixed;inset:0;z-index:10;display:grid;grid-template-columns:minmax(0,1fr);overflow:auto;overscroll-behavior:contain;
+  padding:calc(20px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  background:var(--shade);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:fade .45s ease}
+.veil > *{margin:auto} /* centred when it fits, scrolls from the top when it does not */
+@keyframes fade{from{opacity:0}}
+
+/* ticket */
+.ticket{width:min(560px,100%);background:var(--paper);border-radius:18px;display:grid;grid-template-columns:1fr auto;box-shadow:0 30px 80px rgba(22,38,36,.35);overflow:hidden;animation:rise .8s cubic-bezier(.2,.8,.2,1)}
+@keyframes rise{from{transform:translateY(24px);opacity:0}}
+.t-main{padding:28px 26px 24px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.eyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:700}
+.t-main h1{font-family:var(--display);font-weight:400;font-size:clamp(28px,6vw,40px);line-height:1.08;margin:0;text-wrap:balance}
+.t-main p{margin:0;color:var(--muted);line-height:1.55;max-width:42ch}
+.t-grid{display:grid;grid-template-columns:repeat(3,auto);gap:6px 18px;justify-content:start;border-top:1px dashed var(--line);padding-top:14px;font-size:12px}
+.t-grid span{color:var(--muted);font-size:10px;letter-spacing:.12em;text-transform:uppercase;display:block}
+.t-stub{width:92px;border-left:2px dashed var(--line);background:var(--gold-soft);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px 8px;position:relative}
+.t-stub::before,.t-stub::after{content:"";position:absolute;left:-12px;width:22px;height:22px;border-radius:50%;background:rgba(70,84,82,.62)}
+.t-stub::before{top:-11px}.t-stub::after{bottom:-11px}
+.t-stub .no{writing-mode:vertical-rl;transform:rotate(180deg);font-family:var(--display);font-size:22px;color:var(--accent);letter-spacing:.06em}
+.t-stub svg{width:36px;height:36px}
+.enter{align-self:flex-start;margin-top:4px}
+.small{font-size:12px;color:var(--muted)}
+@media (max-width:440px){.t-stub{width:64px}.t-main{padding:22px 18px}.t-grid{grid-template-columns:repeat(2,auto)}}
+
+/* exhibit card */
+.card{width:min(880px,100%);background:var(--paper);border-radius:18px;box-shadow:0 30px 80px rgba(22,38,36,.35);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);overflow:hidden;animation:rise .5s cubic-bezier(.2,.8,.2,1)}
+.media{background:#141a19;display:grid;place-items:center;min-height:280px;max-height:80vh}
+.media video,.media img{width:100%;height:100%;max-height:80vh;object-fit:contain;display:block}
+.ph{color:#e2eeeb;text-align:center;padding:40px 24px;display:flex;flex-direction:column;gap:10px;align-items:center}
+.ph svg{width:46px;height:46px;opacity:.85}
+.ph b{font-family:var(--display);font-weight:400;font-size:20px}
+.ph span{font-size:13px;opacity:.7;max-width:28ch;line-height:1.5}
+.label{padding:28px 26px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.label h2{font-family:var(--display);font-weight:400;font-size:clamp(24px,4vw,32px);line-height:1.15;margin:0;text-wrap:balance}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px;margin:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:12px 0}
+.facts dt{color:var(--muted)}.facts dd{margin:0}
+.label p{margin:0;line-height:1.65}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:auto;padding-top:6px}
+@media (max-width:700px){.card{grid-template-columns:1fr}.media{max-height:52vh;min-height:220px}.media video,.media img{max-height:52vh}.label{padding:22px 20px}}
+
+/* final letter */
+.letter{width:min(620px,100%);background:var(--paper);border-radius:18px;padding:34px 30px 28px;box-shadow:0 30px 90px rgba(16,52,49,.45);display:flex;flex-direction:column;gap:16px;animation:rise 1.1s cubic-bezier(.2,.8,.2,1)}
+.letter h2{font-family:var(--display);font-weight:400;font-size:clamp(28px,6.4vw,42px);line-height:1.08;margin:0;text-wrap:balance}
+.letter h2 em{font-style:normal;color:var(--accent)}
+.letter p{margin:0;line-height:1.7;font-size:16px;max-width:60ch}
+#fLetter{display:flex;flex-direction:column;gap:12px}
+.sign{font-family:var(--display);font-size:18px;color:var(--accent)}
+@media (max-width:440px){.letter{padding:26px 20px 22px}}
+.hud-l,.hud-r{display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.hud-l{align-items:flex-start;min-width:0}.hud-r{align-items:flex-end}
+.hud-r button{pointer-events:auto;border:1px solid var(--line);background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:999px;padding:8px 14px;font-size:13px;white-space:nowrap}
+.hud-r button[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:transparent}
+.chip.small-chip{font-size:12px;padding:6px 12px}
+.panel{position:fixed;left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));margin:0 auto;max-width:600px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:6;
+  background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;animation:rise .45s cubic-bezier(.2,.8,.2,1)}
+.panel h3{font-family:var(--display);font-weight:400;font-size:22px;margin:0;line-height:1.2;text-wrap:balance}
+.panel p{margin:0;font-size:14px;line-height:1.55;max-height:22vh;overflow:auto}
+.panel .meta{font-size:12px;color:var(--muted)}
+.panel .row{gap:8px;padding-top:4px}
+.panel .row button{padding:9px 14px;font-size:13px}
+.navbtn{min-width:44px}
+/* song buttons */
+.song{background:var(--gold-soft);border:1px solid rgba(185,131,40,.45);color:var(--ink);border-radius:999px;padding:10px 16px;font-size:14px;font-weight:500;max-width:100%;text-align:left}
+.song[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:transparent}
+.song.soon{background:transparent;color:var(--muted);border-style:dashed}
+.panel .row .song{padding:9px 14px;font-size:13px}
+.note-card{width:min(440px,100%);background:#fffdf8;border-radius:6px;padding:30px 28px 24px;box-shadow:0 24px 70px rgba(22,38,36,.4);transform:rotate(-.6deg);display:flex;flex-direction:column;gap:12px;animation:rise .5s cubic-bezier(.2,.8,.2,1);
+  background-image:repeating-linear-gradient(transparent 0 33px,rgba(29,92,87,.12) 33px 34px)}
+.note-card .hand{font-family:var(--hand);font-size:30px;line-height:34px;color:#2c3534;margin:0}
+.note-card .from{font-family:var(--hand);font-size:24px;color:var(--accent);align-self:flex-end}
+#mGuide{color:var(--muted);font-size:14px}
+/* now playing chip */
+.song-chip{flex-direction:column;align-items:flex-start;gap:7px;border-radius:16px;padding:9px 12px;max-width:min(240px,100%)}
+.song-chip .now{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--muted);line-height:1.3}
+.song-chip button{border:0;background:var(--accent);color:#fff;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700}
+.eq{display:inline-flex;gap:2px;align-items:flex-end;height:12px;flex:none}
+.eq i{width:3px;height:6px;background:var(--accent);border-radius:1px;animation:eq 1s ease-in-out infinite}
+.eq i:nth-child(2){animation-delay:-.33s}.eq i:nth-child(3){animation-delay:-.66s}
+@keyframes eq{0%,100%{height:3px}50%{height:12px}}
+/* playlist */
+.playlist{width:min(470px,100%);background:var(--paper);border-radius:18px;padding:26px 24px 22px;box-shadow:0 30px 80px rgba(22,38,36,.35);display:flex;flex-direction:column;gap:12px;animation:rise .5s cubic-bezier(.2,.8,.2,1)}
+.playlist h2{font-family:var(--display);font-weight:400;font-size:clamp(26px,6vw,34px);line-height:1.1;margin:0;text-wrap:balance}
+.playlist > p{margin:0;color:var(--muted);line-height:1.5;font-size:14px}
+.tracks{list-style:none;margin:2px 0 0;padding:0;border-top:1px solid var(--line)}
+.track{display:flex;align-items:center;gap:14px;width:100%;padding:10px 6px;border:0;border-bottom:1px solid var(--line);background:none;text-align:left}
+.track:hover{background:rgba(29,92,87,.05)}
+.track .num{font-family:var(--display);color:var(--gold);font-size:18px;width:1.3em;text-align:center;flex:none}
+.track .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.track .t b{font-weight:500;font-size:15px;line-height:1.3}
+.track .t small{font-size:12px;color:var(--muted);line-height:1.35}
+.track .ic{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line);font-size:14px}
+.track[aria-pressed="true"] .ic{background:var(--accent);color:#fff;border-color:transparent}
+.track[aria-pressed="true"] .st{color:var(--accent);font-weight:700}
+.track.soon{opacity:.6}
+@media (max-width:440px){.panel h3{font-size:19px}.panel p{font-size:13px}.hud-r button{padding:7px 11px;font-size:12px}.playlist{padding:22px 18px 18px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+</head>
+<body>
+<canvas id="scene" aria-label="Трёхмерный зал музея нашей семьи"></canvas>
+
+<div class="hud">
+  <div class="hud-l">
+    <div class="chip" id="progress"><b>Музей нашей семьи</b><span class="dots" id="dots"></span></div>
+    <div class="chip small-chip" id="notesChip">Записки: 0 из 12</div>
+    <div class="chip song-chip" id="songChip" hidden>
+      <span class="now"><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span><span id="songNow"></span></span>
+      <button id="songStop" type="button">■ Остановить песню</button>
+    </div>
+  </div>
+  <div class="hud-r">
+    <button id="tourBtn" type="button">Экскурсия</button>
+    <button id="viewBtn" type="button" aria-pressed="false">Глазами мамы</button>
+    <button id="songsBtn" type="button">♪ Песни</button>
+    <button id="musicBtn" type="button" aria-pressed="false">Музыка: выкл</button>
+  </div>
+</div>
+<div id="toast" role="status"></div>
+<div class="bottom">
+  <button id="prompt" class="cta" type="button" hidden></button>
+  <button id="soundBtn" class="ghost" type="button" hidden>Включить песню фильма</button>
+  <button id="standBtn" class="ghost" type="button" hidden>Встать со скамейки</button>
+  <div id="hint">Нажимай на пол, чтобы идти: мама ведёт, вся семья идёт следом. Тяни мышью, чтобы осмотреться, колесо приближает. Нажми на фото, чтобы подойти вплотную.</div>
+</div>
+<div id="joy" hidden><div id="knob"></div></div>
+
+<div class="panel" id="inspect" hidden>
+  <div class="eyebrow" id="iNo"></div>
+  <h3 id="iTitle"></h3>
+  <div class="meta" id="iMeta"></div>
+  <p id="iText"></p>
+  <div class="row"><button class="song" id="iSong" type="button" aria-pressed="false"></button></div>
+  <div class="row">
+    <button class="ghost navbtn" id="iPrev" type="button" aria-label="Предыдущий экспонат">←</button>
+    <button class="ghost navbtn" id="iNext" type="button" aria-label="Следующий экспонат">→</button>
+    <button class="ghost" id="iSound" type="button" hidden>Звук: вкл</button>
+    <button class="ghost" id="iFull" type="button">На весь экран</button>
+    <button class="cta" id="iExit" type="button">В зал</button>
+  </div>
+</div>
+
+<div class="veil" id="note" hidden>
+  <div class="note-card" role="dialog" aria-modal="true" aria-labelledby="nNo">
+    <div class="eyebrow" id="nNo"></div>
+    <p class="hand" id="nText"></p>
+    <div class="from">от всей семьи</div>
+    <div class="row"><button class="cta" id="nClose" type="button">Сохранить в сердце</button></div>
+  </div>
+</div>
+
+<div class="veil" id="intro">
+  <div class="ticket">
+    <div class="t-main">
+      <div class="eyebrow">Входной билет</div>
+      <h1>Музей нашей семьи</h1>
+      <p id="introText">Здесь нет мрамора и золотых рам. Здесь хранится самое ценное, что у нас есть: мы сами. Экскурсия рассчитана на всю семью, от папы до самого маленького.</p>
+      <div class="t-grid">
+        <div><span>Посетители</span><b>Вся семья</b></div>
+        <div><span>Дата</span><b id="tDate"></b></div>
+        <div><span>Режим работы</span><b>Всегда</b></div>
+        <div><span>Залов</span><b id="tHalls">7</b></div>
+        <div><span>Экспонатов</span><b id="tCount">16</b></div>
+        <div><span>Цена входа</span><b>Одно объятие</b></div>
+      </div>
+      <button class="cta enter" id="enterBtn" type="button">Войти в музей</button>
+      <div class="small">Со звуком будет красивее: в музее звучат песни для каждого из нас.</div>
+    </div>
+    <div class="t-stub" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path fill="#1d5c57" d="M12 2.6 1.8 11.2h2.7V21h15V11.2h2.7z"/><g transform="translate(6.25 8.9) scale(.48)"><path fill="#f5e8cf" d="M12 21s-7.5-4.6-9.6-9.2C.9 8.5 3 5 6.4 5c2.1 0 3.6 1.2 4.6 2.6l1 1.4 1-1.4C14 6.2 15.5 5 17.6 5 21 5 23.1 8.5 21.6 11.8 19.5 16.4 12 21 12 21z"/></g></svg>
+      <div class="no">№ 0006</div>
+    </div>
+  </div>
+</div>
+
+<div class="veil" id="modal" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <div class="media" id="mMedia"></div>
+    <div class="label">
+      <div class="eyebrow" id="mNo"></div>
+      <h2 id="mTitle"></h2>
+      <dl class="facts">
+        <dt>Зал</dt><dd id="mHall"></dd>
+        <dt>Материал</dt><dd id="mMat"></dd>
+        <dt>Датировка</dt><dd id="mDate"></dd>
+        <dt>Происхождение</dt><dd>Семейный архив</dd>
+      </dl>
+      <p id="mText"></p>
+      <p id="mGuide"></p>
+      <div class="row"><button class="song" id="mSong" type="button" aria-pressed="false"></button><button class="cta" id="mClose" type="button">Вернуться в зал</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="veil" id="jukebox" hidden>
+  <div class="playlist" role="dialog" aria-modal="true" aria-labelledby="jTitle">
+    <div class="eyebrow">Семейный проигрыватель</div>
+    <h2 id="jTitle">Песни нашей семьи</h2>
+    <p>По одной песне для каждого и одна для всех вместе. Пока звучит песня, музыкальная шкатулка отдыхает.</p>
+    <ol class="tracks" id="jList"></ol>
+    <div class="row"><button class="ghost" id="jStop" type="button" hidden>■ Остановить песню</button><button class="cta" id="jClose" type="button">Вернуться в зал</button></div>
+  </div>
+</div>
+
+<div class="veil" id="final" hidden>
+  <div class="letter" role="dialog" aria-modal="true" aria-labelledby="fTitle">
+    <div class="eyebrow">Главный экспонат · единственный в мире</div>
+    <h2 id="fTitle">Главное сокровище музея: <em>наша семья</em></h2>
+    <dl class="facts">
+      <dt>Состав</dt><dd id="fFamily"></dd>
+      <dt>Материал</dt><dd>Любовь, терпение и шесть сердец</dd>
+      <dt>Ценность</dt><dd>Не поддаётся оценке</dd>
+      <dt>Статус</dt><dd>Не продаётся, не обменивается, хранится в сердце каждого</dd>
+    </dl>
+    <div id="fLetter"></div>
+    <div class="sign" id="fSign"></div>
+    <div class="row"><button class="song" id="fSong" type="button" aria-pressed="false"></button><button class="cta" id="fClose" type="button">Остаться в музее</button></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ================== НАСТРОЙКИ МУЗЕЯ ==================
+   PEOPLE   : залы музея. Ключ совпадает с именем песни: songs/<ключ>.mp3
+              hall    : название зала на стене и в подписях
+              wall    : -1 левая стена (от входа к кинозалу), 1 правая (от кинозала к входу)
+              forWhom : как подписать песню («Песня для …»), songName : название песни, если есть
+              tint    : цвет стены зала
+   EXHIBITS : экспонаты. who : чей зал, image : фото, ratio : ширина/высота фото (V = 3:4, T = 9:16).
+              Порядок в списке = порядок экскурсии; экспонаты одного зала идут подряд.
+              На одну стену помещается до 8 фото.
+              Фото 16, 17, 18, 19 и 10: не знаем точно, кто из средних сыновей на них.
+              Если нужно поменять, достаточно поменять image (и ratio) у экспонатов Нурэмира и Нурсултана.
+   FILM     : слайд-шоу в кинозале и песня к нему.
+   NOTES    : 12 записок «за что мы любим…»; pos : где лежит конверт.
+   ===================================================== */
+const UNLOCK = 8;                 // сколько экспонатов посмотреть, чтобы открылось главное сокровище
+const SONGS_DIR = "";
+const PEOPLE = {
+  mama:      {hall:"Мама Айганыш", wall:-1, forWhom:"для мамы Айганыш", songName:"Айганыш", tint:0xf1e3dd},
+  usen:      {hall:"Папа Усен",    wall:-1, forWhom:"для папы Усена", songName:"Папа Усен", tint:0xe1e8e1},
+  alinur:    {hall:"Алинур",       wall:-1, forWhom:"для Алинура", songName:"Алинур, старший брат", tint:0xdfe7ee},
+  nuremir:   {hall:"Нурэмир",      wall:-1, forWhom:"для Нурэмира", songName:"Нурэмир, маленький герой", tint:0xefe5d6},
+  nursultan: {hall:"Нурсултан",    wall:-1, forWhom:"для Нурсултана", songName:"Нурсултан, маленький капитан", tint:0xdeeae3},
+  asad:      {hall:"Асад",         wall: 1, forWhom:"для Асада", songName:"Асад, наше солнышко", tint:0xf2e8d2},
+  semya:     {hall:"Мы вместе",    wall: 1, forWhom:"для всей семьи", songName:"Мы вместе", tint:0xdde9e7}
+};
+const PLAYLIST = ["usen","mama","alinur","nuremir","nursultan","asad","semya"];
+const FAMILY = [
+  {name:"Папа Усен",    role:"глава семьи"},
+  {name:"Мама Айганыш", role:"сердце нашего дома"},
+  {name:"Алинур",       role:"старший сын"},
+  {name:"Нурэмир",      role:"второй сын"},
+  {name:"Нурсултан",    role:"третий сын"},
+  {name:"Асад",         role:"самый младший, ему годик"}
+];
+const V = 3/4, T = 9/16;
+
+const EXHIBITS = [
+  /* ---- зал 1: мама ---- */
+  {who:"mama", image:"01.jpg", ratio:V, title:"Мамина улыбка",
+   mat:"Розовый свитер, мягкий свет и улыбка", date:"Обычный домашний день",
+   text:"Так улыбается наша мама Айганыш, когда дома всё хорошо. А дома всё хорошо, когда мама улыбается.",
+   guide:"Перед вами один из самых тёплых экспонатов музея. Искусствоведы уверены: этот мягкий свет идёт не из окна, а от самой мамы. Этот портрет каждый в семье узнает с закрытыми глазами."},
+  {who:"mama", image:"11.jpg", ratio:V, title:"Свет нашего дома",
+   mat:"Белая футболка и спокойная нежность", date:"Один из многих счастливых дней",
+   text:"Мама Айганыш, рядом с которой спокойно всем: и большим, и самым маленьким.",
+   guide:"Ничего лишнего: простая футболка, светлая стена и взгляд, полный доброты. Хранители отмечают, что именно так мама слушает всех четверых сыновей сразу. Терпение такого размера музей пока не сумел измерить."},
+  /* ---- зал 2: папа ---- */
+  {who:"usen", image:"03.jpg", ratio:V, title:"Папа рядом",
+   mat:"Вечерние огни, белая рубашка и надёжное плечо", date:"Тёплый семейный вечер",
+   text:"Усен и Айганыш с маленьким Асадом. Вечер, в который никуда не нужно спешить.",
+   guide:"Огни за спиной красивые, но светят слабее, чем улыбки на этом снимке. Обратите внимание на Асада: он держится уверенно, потому что знает, что рядом самые надёжные люди на свете."},
+  {who:"usen", image:"04.jpg", ratio:V, title:"Вечер под гирляндами",
+   mat:"Качели, тёплые лампы и большая семья", date:"Тёплый вечер",
+   text:"Когда все рядом, даже обычные качели становятся самым уютным местом на свете.",
+   guide:"Этот снимок хранители музея называют семейным гербом. Усен и Айганыш в центре, сыновья рядом, а над всеми мягкий свет гирлянд. Кто-то показывает «класс», и с ним трудно не согласиться."},
+  /* ---- зал 3: Алинур ---- */
+  {who:"alinur", image:"13.jpg", ratio:V, title:"Башня мечты",
+   mat:"Конструктор, терпение и большие планы", date:"День большой стройки",
+   text:"Алинур построил башню выше всех ожиданий. Братья смотрят и учатся.",
+   guide:"Перед вами настоящий архитектурный шедевр. Старший брат строил его деталь за деталью и не сдался, пока башня не выросла почти до его подбородка. Специалисты предсказывают: следующая будет до потолка."},
+  {who:"alinur", image:"14.jpg", ratio:T, title:"Алинур и Иссык-Куль",
+   mat:"Камни, солнце и синяя вода", date:"Солнечный день на Иссык-Куле",
+   text:"Озеро огромное, а Алинур сидит на камнях спокойно и уверенно, как настоящий хозяин берега.",
+   guide:"Синяя вода до самого горизонта, тёплые камни и кепка от солнца. Хранители уверены: из таких дней и складывается детство, которое помнят всю жизнь. Говорят, если долго смотреть на этот снимок, можно услышать плеск волн."},
+  /* ---- зал 4: Нурэмир (фото общее, подпись без имени) ---- */
+  {who:"nuremir", image:"17.jpg", ratio:V, title:"Отважные пожарные",
+   mat:"Красные каски, рация и смелость", date:"День важной службы",
+   text:"Расчёт на месте, каски надеты, рация на связи. Дом под надёжной защитой.",
+   guide:"Перед вами самая отважная команда музея. Вызов принят, рация работает, каски сидят как надо. Если где-то загорится скука, эти ребята потушат её за секунду."},
+  /* ---- зал 5: Нурсултан (фото общее, подпись без имени) ---- */
+  {who:"nursultan", image:"16.jpg", ratio:V, title:"Маленький исследователь",
+   mat:"Фонтан, белая футболка и любопытство", date:"Прогулка",
+   text:"Всё нужно потрогать, проверить и понять. Так устроены настоящие исследователи.",
+   guide:"Обратите внимание на сосредоточенность: вода в фонтане течёт давно, но по-настоящему её изучают только сегодня. Учёные советуют не мешать, ведь идёт очень важный эксперимент."},
+  /* ---- зал 6: Асад ---- */
+  {who:"asad", image:"09.jpg", ratio:V, title:"Нам один год!",
+   mat:"Шар-единица, плюшевый мишка и корона", date:"Первый день рождения",
+   text:"Асаду исполнился год. Корона на месте, мишка в восторге.",
+   guide:"Главное событие года в музее нашей семьи: самый младший впервые отмечает день рождения. Корону Асад носит так, будто родился в ней. Мишка на шаре, кажется, радуется не меньше всех."},
+  {who:"asad", image:"08.jpg", ratio:V, title:"Вафельный перерыв",
+   mat:"Вафля, голубая рубашка и полная серьёзность", date:"Время перекуса",
+   text:"Сначала вафля, потом всё остальное. У Асада свои приоритеты.",
+   guide:"Редкий кадр: малыш занят делом и не отвлекается на фотографа. Посмотрите на это сосредоточенное лицо. Так выглядит человек, который точно знает, чего хочет."},
+  {who:"asad", image:"15.jpg", ratio:V, title:"Строитель на пляже",
+   mat:"Песок, жёлтая лопатка и панама", date:"Пляжный день",
+   text:"Лопатка в руке, план в голове. Пляж ещё не знает, что его ждёт.",
+   guide:"Самый младший член семьи выходит на свою первую большую стройку. Ведёрко красное, лопатка жёлтая, настроение отличное. Хранители надеются, что однажды он построит башню не ниже, чем у старшего брата."},
+  {who:"asad", image:"20.jpg", ratio:T, title:"Солнечный причал",
+   mat:"Оранжевые доски, синее небо и маленькие пяточки", date:"День у воды",
+   text:"Целый причал, целое небо, и посередине Асад.",
+   guide:"Посмотрите, какой огромный мир вокруг и какой маленький в нём путешественник. Солнце, ветер с воды и полное спокойствие: малыш уверен, что весь этот причал построили специально для него."},
+  /* ---- зал 7: мы вместе ---- */
+  {who:"semya", image:"02.jpg", ratio:V, title:"Братья",
+   mat:"Ковёр, корона с единицей и братские объятия", date:"Праздник дома",
+   text:"Старший брат обнимает самого маленького, а рядом ещё один брат в очках. Сегодня у малыша праздник.",
+   guide:"Хранители музея считают этот снимок доказательством: братская дружба начинается с самого первого дня рождения. Корону сегодня носит младший, обнимает его старший, а третий брат следит, чтобы праздник шёл как надо."},
+  {who:"semya", image:"10.jpg", ratio:V, title:"Братская забота",
+   mat:"Коляска, тёплые курточки и маленькие руки", date:"Прогулка во дворе",
+   text:"Брат поправляет козырёк коляски, чтобы малышу было уютно. Ответственная работа!",
+   guide:"Обратите внимание: о пассажире заботится не взрослый. Маленький помощник серьёзен и сосредоточен, а малыш в коляске полностью ему доверяет. Так в нашей семье с детства учатся заботиться друг о друге."},
+  {who:"semya", image:"12.jpg", ratio:V, title:"Мамины поцелуи",
+   mat:"Осенние листья и два поцелуя в щёки", date:"Осенняя прогулка",
+   text:"Два сына, две щеки, одна счастливая мама Айганыш.",
+   guide:"Самый нежный экспонат осенней коллекции. Под ногами жёлтые листья, вокруг высокие деревья, а в центре мама, которую любят сразу с двух сторон. Хранители утверждают, что такие поцелуи греют лучше любого шарфа."},
+  {who:"semya", image:"19.jpg", ratio:V, title:"Осенняя тропинка",
+   mat:"Жёлтые листья, длинная дорога и маленькие шаги", date:"Осенняя прогулка",
+   text:"Дорога длинная, но рядом семья, а значит, идти не страшно.",
+   guide:"Тропинка уходит далеко в осенний лес, а маленький путешественник уверенно стоит посередине. Он знает, что рядом мама, папа и братья. С такой поддержкой можно дойти куда угодно."}
+];
+
+const FILM = {title:"Наш фильм", song:"semya", slides:[
+  {src:"04.jpg", cap:"Мы вместе"},
+  {src:"01.jpg", cap:"Мама Айганыш"},
+  {src:"11.jpg", cap:"Свет нашего дома"},
+  {src:"03.jpg", cap:"Усен и Айганыш с Асадом"},
+  {src:"13.jpg", cap:"Алинур и башня мечты"},
+  {src:"14.jpg", cap:"Алинур на Иссык-Куле"},
+  {src:"02.jpg", cap:"Братья"},
+  {src:"17.jpg", cap:"Отважные пожарные"},
+  {src:"16.jpg", cap:"Маленький исследователь"},
+  {src:"18.jpg", cap:"Вкусный обед"},
+  {src:"10.jpg", cap:"Братская забота"},
+  {src:"12.jpg", cap:"Мамины поцелуи"},
+  {src:"19.jpg", cap:"Осенняя тропинка"},
+  {src:"05.jpg", cap:"Асаду один год"},
+  {src:"06.jpg", cap:"Праздник"},
+  {src:"07.jpg", cap:"Самый счастливый день"},
+  {src:"09.jpg", cap:"Корона на месте"},
+  {src:"08.jpg", cap:"Вафельный перерыв"},
+  {src:"15.jpg", cap:"Строитель на пляже"},
+  {src:"20.jpg", cap:"Солнечный причал"}
+]};
+
+const NOTES = [
+  {to:"папу",           text:"За сильные руки, на которых спокойно и маленьким, и большим.", pos:[-6.3,0.35,15.2]},
+  {to:"маму Айганыш",   text:"За тёплые руки, которые всё успевают: обнять, накормить, утешить.", pos:[6.3,0.35,15.2]},
+  {to:"Асада",          text:"За первый год, который пролетел как один счастливый день.", pos:[1.5,0.75,-10]},
+  {to:"Алинура",        text:"За то, что младшим братьям есть на кого равняться.", pos:[-6.3,0.35,-15.1]},
+  {to:"нашу семью",     text:"За то, что у нас бывает шумно, тесно и всегда очень тепло.", pos:[6.3,0.35,-15.1]},
+  {to:"маму Айганыш",   text:"За её улыбку. С ней дома светло даже в самый пасмурный день.", pos:[1.7,0.35,2.6]},
+  {to:"Нурэмира",       text:"За то, что с ним в доме никогда не бывает скучно.", pos:[-3,0.35,7.2]},
+  {to:"Нурсултана",     text:"За его любопытство. Ему интересно всё на свете, и это прекрасно.", pos:[3,0.35,-3.6]},
+  {to:"папу",           text:"За то, что он рядом. С папой любая дорога короче, а любой вечер теплее.", pos:[-7.3,0.35,3.6]},
+  {to:"наших мальчишек",text:"За то, что их четверо, и каждый особенный по-своему.", pos:[7.3,0.35,10.8]},
+  {to:"наших мальчишек",text:"За смех, топот и обнимашки, без которых дом был бы слишком тихим.", pos:[3.4,0.35,-12.6]},
+  {to:"нашу семью",     text:"За то, что мы есть друг у друга. Это и есть главное богатство.", pos:[-2.6,0.35,-7]}
+];
+
+const LETTER = [
+  "Дорогие наши! В каждом музее есть главный экспонат, ради которого приходят посетители. Мы долго думали, что поставить в центр этого зала, и поняли: ничего ценнее нас самих у нас нет.",
+  "Папа Усен, спасибо за твою силу и заботу. Рядом с тобой спокойно всем, от самого старшего до самого маленького. Мама Айганыш, ты сердце нашего дома: всё тепло, которое здесь есть, начинается с тебя.",
+  "Алинур, ты старший, и младшие братья смотрят на тебя. Нурэмир и Нурсултан, с вами в доме всегда смех, игры и движение. Асад, тебе только исполнился год, а ты уже сделал нас всех ещё счастливее.",
+  "Пусть в этом музее появляется всё больше экспонатов: новые прогулки, праздники, поездки к озеру и самые обычные вечера дома. Главное в них всегда будет одним и тем же: мы вместе.",
+  "Мы любим вас. Каждого по отдельности и всех сразу."
+];
+const SIGN = "С любовью, ваша семья";
+/* ===================================================== */
+
+(function(){
+const $ = id => document.getElementById(id);
+const TOTAL = Math.min(UNLOCK, EXHIBITS.length + 1);
+const ACC = 0x1d5c57, GOLD = 0xc9973f;
+const ACC_CSS = "#1d5c57", INK_CSS = "#232a2a", MUTED_CSS = "rgba(35,42,42,.6)";
+const heartPath = "M12 21s-7.5-4.6-9.6-9.2C.9 8.5 3 5 6.4 5c2.1 0 3.6 1.2 4.6 2.6l1 1.4 1-1.4C14 6.2 15.5 5 17.6 5 21 5 23.1 8.5 21.6 11.8 19.5 16.4 12 21 12 21z";
+const SILENT = "data:audio/wav;base64,UklGRrQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YZABAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA";
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+const cap = s => s ? s.charAt(0).toUpperCase()+s.slice(1) : "";
+const hallName = who => (PEOPLE[who] && PEOPLE[who].hall) || "";
+const plural = (n,one,few,many) => { const a=n%10, b=n%100; return a===1&&b!==11?one:(a>=2&&a<=4&&(b<12||b>14))?few:many; };
+
+/* shared state (declared early: the song UI touches it from callbacks) */
+let inspect=null, modalIdx=null, openModal=null, sitting=false, entered=false, gramoPlaying=false;
+
+/* ---------- intro text ---------- */
+$("tDate").textContent = new Date().toLocaleDateString("ru-RU",{day:"numeric",month:"long"});
+$("tCount").textContent = EXHIBITS.length;
+$("tHalls").textContent = new Set(EXHIBITS.map(e=>e.who)).size;
+$("fLetter").innerHTML = LETTER.map(p=>"<p>"+esc(p)+"</p>").join("");
+$("fSign").textContent = SIGN;
+$("fFamily").textContent = FAMILY.map((f,i)=>i? f.name.replace(/^Мама /,"мама ").replace(/^Папа /,"папа ") : f.name).join(", ").replace(/, ([^,]+)$/," и $1");
+
+/* ---------- progress ---------- */
+let seen = new Set();
+try{ JSON.parse(localStorage.getItem("muzey-semya-seen")||"[]").forEach(x=>seen.add(x)); }catch(e){}
+let unlocked = seen.size >= TOTAL;
+function renderDots(){
+  $("dots").innerHTML = Array.from({length:TOTAL},(_,i)=>`<i class="${i<seen.size?"on":""}"></i>`).join("") + `<i class="${unlocked?"on":""}" style="border-radius:2px"></i>`;
+  $("progress").setAttribute("aria-label",`Осмотрено ${Math.min(seen.size,TOTAL)} из ${TOTAL}`);
+}
+function markSeen(i){
+  if(seen.has(i)) return;
+  seen.add(i);
+  try{ localStorage.setItem("muzey-semya-seen",JSON.stringify([...seen])); }catch(e){}
+  renderDots();
+  if(seen.size>=TOTAL && !unlocked){ unlocked=true; renderDots(); revealHeart(); }
+  else if(!unlocked) setTimeout(()=>toast(`Осмотрено ${seen.size} из ${TOTAL}. Главное сокровище в центре зала откроется после ${TOTAL}.`),400);
+}
+renderDots();
+
+let toastT;
+function toast(msg,ms=3600){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),ms); }
+
+/* ---------- music box (WebAudio) ---------- */
+let actx, master, musicOn=false, musicTimer, nextNote=0, step=0;
+const N = f=>440*Math.pow(2,(f-69)/12);
+const prog=[[60,64,67],[55,59,62],[57,60,64],[53,57,60]];
+function audioInit(){
+  if(actx) return;
+  try{
+    actx=new (window.AudioContext||window.webkitAudioContext)();
+    master=actx.createGain(); master.gain.value=0.0;
+    const delay=actx.createDelay(); delay.delayTime.value=0.33;
+    const fb=actx.createGain(); fb.gain.value=0.32;
+    const wet=actx.createGain(); wet.gain.value=0.35;
+    master.connect(actx.destination); master.connect(delay); delay.connect(fb); fb.connect(delay); delay.connect(wet); wet.connect(actx.destination);
+  }catch(e){ actx=null; }
+}
+function pluck(t,midi,vel){
+  [[1,"triangle",vel],[2,"sine",vel*.35]].forEach(([m,type,g])=>{
+    const o=actx.createOscillator(), a=actx.createGain();
+    o.type=type; o.frequency.value=N(midi)*m;
+    a.gain.setValueAtTime(0,t); a.gain.linearRampToValueAtTime(g,t+.008); a.gain.exponentialRampToValueAtTime(.0001,t+1.8);
+    o.connect(a); a.connect(master); o.start(t); o.stop(t+1.9);
+  });
+}
+function schedule(){
+  while(nextNote < actx.currentTime+0.25){
+    const ch=prog[Math.floor(step/8)%4], i=step%8;
+    const pat=[0,1,2,1+3,2+3,1,2,0];
+    const idx=pat[i], midi=ch[idx%3]+12*(idx>2?1:0)+12;
+    pluck(nextNote,midi,i===0?.16:.1);
+    if(i===0) pluck(nextNote,ch[0]-12,.09);
+    nextNote+=0.36; step++;
+  }
+}
+function setMusic(on){
+  if(!actx) return;
+  musicOn=on;
+  $("musicBtn").textContent = "Музыка: "+(on?"вкл":"выкл");
+  $("musicBtn").setAttribute("aria-pressed",on);
+  if(on){ actx.resume(); nextNote=Math.max(nextNote,actx.currentTime+.05); clearInterval(musicTimer); musicTimer=setInterval(schedule,60);
+    master.gain.cancelScheduledValues(actx.currentTime); master.gain.linearRampToValueAtTime(.55,actx.currentTime+1.2); }
+  else { master.gain.cancelScheduledValues(actx.currentTime); master.gain.linearRampToValueAtTime(0,actx.currentTime+.4); setTimeout(()=>{ if(!musicOn) clearInterval(musicTimer); },500); }
+}
+let musicWanted=false;
+function duckMusic(){ if(musicOn) setMusic(false); }
+function restoreMusic(){ if(musicWanted && !musicOn && !songOn) setMusic(true); }
+
+/* ---------- songs (HTML Audio, one at a time) ---------- */
+const songEl = new Audio(); songEl.preload = "auto";
+const songState = {};                // id -> "ok" | "missing"; no key = not checked yet
+let songId=null, songOn=false, songFilm=false;
+const songUrl = id => SONGS_DIR + id + ".mp3";
+const songTitle = id => "Песня " + ((PEOPLE[id] && PEOPLE[id].forWhom) || "");
+function songLabel(id){
+  if(songOn && songId===id) return "■ Остановить песню";
+  const fw=(PEOPLE[id] && PEOPLE[id].forWhom) || "";
+  if(songState[id]==="missing") return "♪ " + cap(fw) + ": песня скоро";
+  return "♪ " + songTitle(id);
+}
+function probeSongs(){
+  PLAYLIST.forEach(id=>{
+    const a=new Audio(); let done=false;
+    const fin=st=>{ if(done) return; done=true; if(songState[id]!=="ok") songState[id]=st; a.removeAttribute("src"); try{ a.load(); }catch(e){} renderSongs(); };
+    a.preload="metadata";
+    a.addEventListener("loadedmetadata",()=>fin("ok"));
+    a.addEventListener("error",()=>fin("missing"));
+    a.src=songUrl(id);
+  });
+}
+function muteInspectVideo(){ if(inspect!==null && exhibitObjs){ const v=exhibitObjs[inspect].video; if(v) v.muted=true; } }
+function playSong(id,opt={}){
+  if(songState[id]==="missing"){ toast(`${songTitle(id)} скоро появится в музее.`); return false; }
+  songId=id; songFilm=!!opt.film; songEl.loop=!!opt.film;
+  if(songEl.getAttribute("src")!==songUrl(id)) songEl.src=songUrl(id);
+  try{ songEl.currentTime=0; }catch(e){}
+  songOn=true; duckMusic(); muteInspectVideo(); renderSongs();
+  const p=songEl.play();
+  if(p && p.catch) p.catch(err=>{
+    if(songId!==id) return;
+    if(err && err.name==="NotAllowedError"){
+      songOn=false; renderSongs(); restoreMusic();
+      if(opt.film) $("soundBtn").hidden=false; else if(!opt.auto) toast("Нажми ещё раз, чтобы включить песню.");
+    } else if(!err || err.name!=="AbortError") songFailed(id);
+  });
+  if(!opt.film) toast("♪ Звучит "+songTitle(id).replace(/^Песня/,"песня"),2600);
+  return true;
+}
+function songFailed(id){
+  const was=songState[id]; songState[id]="missing";
+  if(songId===id){ songEl.pause(); songOn=false; songId=null; songFilm=false; restoreMusic(); }
+  renderSongs();
+  if(was!=="missing") toast(`${songTitle(id)} скоро появится. Пока играет музыкальная шкатулка.`,4200);
+}
+function stopSong(silent){ songEl.pause(); songOn=false; songId=null; songFilm=false; songEl.loop=false; renderSongs(); if(!silent) restoreMusic(); }
+function toggleSong(id){ audioInit(); if(songOn && songId===id) stopSong(); else playSong(id); }
+songEl.addEventListener("error",()=>{ if(songId && songEl.getAttribute("src")===songUrl(songId)) songFailed(songId); });
+songEl.addEventListener("loadedmetadata",()=>{ if(songId && songEl.getAttribute("src")===songUrl(songId)){ songState[songId]="ok"; renderSongs(); } });
+songEl.addEventListener("ended",()=>{ if(songEl.loop) return; songOn=false; songId=null; renderSongs(); restoreMusic(); });
+function setSongBtn(b,id){ b.textContent=songLabel(id); b.classList.toggle("soon",songState[id]==="missing" && !(songOn&&songId===id)); b.setAttribute("aria-pressed",String(songOn&&songId===id)); }
+function renderSongs(){
+  if(inspect!==null) setSongBtn($("iSong"),EXHIBITS[inspect].who);
+  if(modalIdx!==null) setSongBtn($("mSong"),EXHIBITS[modalIdx].who);
+  setSongBtn($("fSong"),"semya");
+  $("songChip").hidden=!songOn;
+  if(songOn) $("songNow").textContent=songTitle(songId);
+  PLAYLIST.forEach(id=>{
+    const row=document.querySelector(`#jList [data-song="${id}"]`); if(!row) return;
+    const on=songOn&&songId===id, st=songState[id];
+    row.setAttribute("aria-pressed",String(on)); row.classList.toggle("soon",st==="missing"&&!on);
+    row.querySelector(".st").textContent = on?"Сейчас звучит":st==="missing"?"Песня скоро":"Слушать";
+    row.querySelector(".ic").textContent = on?"■":"♪";
+  });
+  $("jStop").hidden=!songOn;
+  gramoPlaying=songOn;
+}
+$("jList").innerHTML = PLAYLIST.map((id,k)=>{ const p=PEOPLE[id]||{}, named=!!p.songName;
+  return `<li><button class="track" type="button" data-song="${id}" aria-pressed="false"><span class="num">${k+1}</span><span class="t"><b>${esc(named?"«"+p.songName+"»":songTitle(id))}</b><small>${named?esc(songTitle(id))+" · ":""}<span class="st">Слушать</span></small></span><span class="ic" aria-hidden="true">♪</span></button></li>`; }).join("");
+$("jList").addEventListener("click",e=>{ const b=e.target.closest("[data-song]"); if(b) toggleSong(b.dataset.song); });
+$("jStop").onclick=()=>stopSong();
+$("songStop").onclick=()=>stopSong();
+$("fSong").onclick=()=>toggleSong("semya");
+function openJukebox(){ $("jukebox").hidden=false; openModal="jukebox"; renderSongs(); const f=document.querySelector("#jList .track"); if(f) f.focus({preventScroll:true}); }
+function closeJukebox(){ $("jukebox").hidden=true; openModal=null; }
+$("jClose").onclick=closeJukebox;
+$("jukebox").addEventListener("click",e=>{ if(e.target.id==="jukebox") closeJukebox(); });
+$("songsBtn").onclick=()=>{ if(openModal===null) openJukebox(); };
+$("musicBtn").onclick=()=>{ audioInit(); if(!musicOn && songOn) stopSong(true); musicWanted=!musicOn; setMusic(!musicOn); };
+probeSongs();
+renderSongs();
+let exhibitObjs=null;
+
+/* ---------- three.js ---------- */
+if(!window.THREE){ $("introText").textContent="Не удалось загрузить 3D. Проверь интернет и обнови страницу."; return; }
+const canvas=$("scene");
+let renderer;
+try{ renderer=new THREE.WebGLRenderer({canvas,antialias:true}); }
+catch(e){ $("introText").textContent="Этот браузер не показывает 3D. Открой ссылку в Chrome или Safari."; return; }
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.outputEncoding=THREE.sRGBEncoding;
+renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0xefebe7);
+scene.fog=new THREE.Fog(0xefebe7,22,46);
+const camera=new THREE.PerspectiveCamera(55,1,.1,100);
+function resize(){ const w=innerWidth,h=innerHeight; renderer.setSize(w,h,false); camera.aspect=w/h; camera.fov = w<h ? 68 : 55; camera.updateProjectionMatrix(); }
+addEventListener("resize",resize); resize();
+
+const HW=8, HL=16, H=5;
+const PR="Prata, Georgia, serif", MR="Manrope, sans-serif";
+const std=(c,o={})=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.85,metalness:0},o));
+function mesh(geo,mat,cast=true){ const m=new THREE.Mesh(geo,mat); m.castShadow=cast; return m; }
+function canvasTex(w,h,draw){ const c=document.createElement("canvas"); c.width=w; c.height=h; const x=c.getContext("2d"); draw(x,w,h); const t=new THREE.CanvasTexture(c); t.encoding=THREE.sRGBEncoding; t.anisotropy=4; t.userData={c,x,redraw:()=>{ x.clearRect(0,0,w,h); draw(x,w,h); t.needsUpdate=true; }}; return t; }
+function drawHeart(x,cx,cy,s,fill){ x.save(); x.translate(cx-12*s,cy-13*s); x.scale(s,s); x.fillStyle=fill; x.fill(new Path2D(heartPath)); x.restore(); }
+function wrap(x,text,px,py,maxW,lh){ const words=text.split(" "); let line=""; for(const wd of words){ const t=line?line+" "+wd:wd; if(x.measureText(t).width>maxW && line){ x.fillText(line,px,py); line=wd; py+=lh; } else line=t; } x.fillText(line,px,py); return py; }
+
+/* shared image loader: one download per photo, used by wall frames and the cinema */
+const imgCache={};
+function loadImg(src,cb){
+  let e=imgCache[src];
+  if(!e){ e=imgCache[src]={img:new Image(),ok:false,cbs:[]}; e.img.decoding="async";
+    e.img.onload=()=>{ e.ok=true; const l=e.cbs; e.cbs=[]; l.forEach(f=>f(e.img)); };
+    e.img.onerror=()=>{ e.cbs=[]; }; e.img.src=src; }
+  if(e.ok) cb(e.img); else e.cbs.push(cb);
+}
+/* photos go to the GPU at a power-of-two size (512×1024): sharp enough, light on phones */
+function imageTexture(img){
+  const land=img.naturalWidth>img.naturalHeight, c=document.createElement("canvas");
+  c.width=land?1024:512; c.height=land?512:1024; c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+  const t=new THREE.CanvasTexture(c); t.encoding=THREE.sRGBEncoding; t.anisotropy=4; return t;
+}
+
+/* lights */
+scene.add(new THREE.HemisphereLight(0xffffff,0xcfc6bf,.62));
+const sun=new THREE.DirectionalLight(0xfff3e6,.62); sun.position.set(5,12,7); sun.castShadow=true;
+sun.shadow.mapSize.set(1024,1024); Object.assign(sun.shadow.camera,{left:-12,right:12,top:20,bottom:-20,near:1,far:40}); sun.shadow.bias=-.0008;
+scene.add(sun);
+
+/* room */
+const floorTex=canvasTex(512,512,(x,w,h)=>{ x.fillStyle="#f3f0ec"; x.fillRect(0,0,w,h);
+  for(let i=0;i<5000;i++){ x.fillStyle=`rgba(110,100,90,${Math.random()*.035})`; x.fillRect(Math.random()*w,Math.random()*h,2,2); }
+  x.strokeStyle="rgba(110,100,90,.10)"; x.lineWidth=2; x.strokeRect(0,0,w,h); });
+floorTex.wrapS=floorTex.wrapT=THREE.RepeatWrapping; floorTex.repeat.set(4,8);
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(HW*2,HL*2),std(0xffffff,{map:floorTex,roughness:.45}));
+floor.rotation.x=-Math.PI/2; floor.receiveShadow=true; scene.add(floor);
+const wallMat=std(0xece8e3);
+function wall(w,h,x,y,z,ry){ const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),wallMat); m.position.set(x,y,z); m.rotation.y=ry; m.receiveShadow=true; scene.add(m); return m; }
+wall(HL*2,H,-HW,H/2,0,Math.PI/2); wall(HL*2,H,HW,H/2,0,-Math.PI/2); wall(HW*2,H,0,H/2,-HL,0); wall(HW*2,H,0,H/2,HL,Math.PI);
+const ceil=new THREE.Mesh(new THREE.PlaneGeometry(HW*2,HL*2),std(0xf7f5f2)); ceil.rotation.x=Math.PI/2; ceil.position.y=H; scene.add(ceil);
+const baseMat=std(0x2f3534);
+[[HL*2,-HW+.02,0,0],[HL*2,HW-.02,0,0],[HW*2,0,-HL+.02,1],[HW*2,0,HL-.02,1]].forEach(([l,x,z,r])=>{ const b=mesh(new THREE.BoxGeometry(r?l:.04,.12,r?.04:l),baseMat,false); b.position.set(x,.06,z); scene.add(b); });
+const stripMat=new THREE.MeshBasicMaterial({color:0xfffaf2});
+[-3,3].forEach(x=>{ const s=new THREE.Mesh(new THREE.BoxGeometry(.25,.04,HL*2-4),stripMat); s.position.set(x,H-.03,0); scene.add(s); });
+/* entrance door */
+const door=mesh(new THREE.BoxGeometry(2.4,3.2,.1),std(0x2f3534),false); door.position.set(0,1.6,HL-.03); scene.add(door);
+const doorIn=new THREE.Mesh(new THREE.PlaneGeometry(2.1,3),std(0x6b4f3a)); doorIn.position.set(0,1.55,HL-.09); doorIn.rotation.y=Math.PI; scene.add(doorIn);
+
+/* text panels on walls */
+function wallText(lines,w,h,pos,ry,opt={}){
+  const tex=canvasTex(Math.round(w*220),Math.round(h*220),(x,cw,ch)=>{
+    x.clearRect(0,0,cw,ch); x.textAlign=opt.align||"center"; x.textBaseline="middle";
+    let y=ch/2-(lines.length-1)*opt.lh/2;
+    lines.forEach(l=>{ x.font=l.f; x.fillStyle=l.c||INK_CSS; x.fillText(l.t,opt.align==="left"?20:cw/2,y); y+=opt.lh; });
+  });
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:tex,transparent:true}));
+  m.position.copy(pos); m.rotation.y=ry; scene.add(m); return m;
+}
+
+/* ---------- exhibits: one coloured section of wall per person ---------- */
+const clickables=[];
+const placeholderTex=(i,has)=>canvasTex(540,960,(x,w,h)=>{
+  const g=x.createLinearGradient(0,0,w,h); g.addColorStop(0,"#e7f0ed"); g.addColorStop(1,"#d6e4e0"); x.fillStyle=g; x.fillRect(0,0,w,h);
+  drawHeart(x,w/2,h*.38,4.2,"rgba(29,92,87,.8)");
+  x.fillStyle=INK_CSS; x.textAlign="center"; x.font="34px "+PR; x.fillText("Экспонат № "+i,w/2,h*.58);
+  x.font="500 26px "+MR; x.fillStyle=MUTED_CSS; x.fillText(has?"сейчас покажу…":"здесь будет фото",w/2,h*.64);
+});
+const washTex=canvasTex(256,256,(x,w,h)=>{ const g=x.createRadialGradient(w/2,h*.25,4,w/2,h*.45,w*.6); g.addColorStop(0,"rgba(255,236,214,.95)"); g.addColorStop(1,"rgba(255,236,214,0)"); x.fillStyle=g; x.fillRect(0,0,w,h); });
+function fitCover(tex,planeA,mediaA){
+  tex.repeat.set(1,1); tex.offset.set(0,0);
+  if(mediaA>planeA){ tex.repeat.x=planeA/mediaA; tex.offset.x=(1-tex.repeat.x)/2; }
+  else { tex.repeat.y=mediaA/planeA; tex.offset.y=(1-tex.repeat.y)/2; }
+}
+/* lay the frames out along each wall in tour order, with wider gaps between halls */
+const layout=(()=>{
+  const walls={"-1":[],"1":[]}, items=[], sections=[];
+  EXHIBITS.forEach((e,i)=>{ const side=((PEOPLE[e.who]||{}).wall||-1)<0?-1:1, r=e.ratio||V, h=r<1?1.9:1.4, w=h*r;
+    walls[side].push({i,side,w,h,a:w/2+.15,b:w/2+.64,who:e.who}); });
+  [-1,1].forEach(side=>{
+    const list=walls[side]; if(!list.length) return;
+    const U0=side<0?-14.05:-7.7, LEN=21.75; let same=0, breaks=0, sum=0;
+    list.forEach((it,k)=>{ sum+=it.a+it.b; if(k){ if(it.who===list[k-1].who) same++; else breaks++; } });
+    const g=Math.max(.12,(LEN-sum)/(same+2.2*breaks+1.2));
+    let u=U0+.6*g, cur=null;
+    list.forEach((it,k)=>{ if(k) u+= it.who===list[k-1].who ? g : 2.2*g;
+      const c=u+it.a; u=c+it.b; it.z=side<0?-c:c; items[it.i]=it;
+      if(!cur || cur.who!==it.who){ cur={who:it.who,side,u0:c-it.a,u1:u}; sections.push(cur); } else cur.u1=u; });
+  });
+  return {items,sections};
+})();
+layout.sections.forEach((s,k)=>{
+  const p=PEOPLE[s.who]||{}, len=s.u1-s.u0+.3, mid=(s.u0+s.u1)/2, z=s.side<0?-mid:mid, ry=s.side<0?Math.PI/2:-Math.PI/2;
+  const pan=new THREE.Mesh(new THREE.PlaneGeometry(len,4.5),std(p.tint||0xe9e4de,{roughness:.9})); pan.position.set(s.side*(HW-.012),2.37,z); pan.rotation.y=ry; pan.receiveShadow=true; scene.add(pan);
+  wallText([{t:"ЗАЛ "+(k+1),f:"700 20px "+MR,c:ACC_CSS},{t:p.hall||"",f:"44px "+PR}],Math.max(1.4,Math.min(len-.2,3.4)),.8,new THREE.Vector3(s.side*(HW-.025),4.17,z),ry,{lh:54});
+});
+exhibitObjs=EXHIBITS.map((e,i)=>{
+  const L=layout.items[i], w=L.w, h=L.h, side=L.side, z=L.z;
+  const g=new THREE.Group(); g.position.set(side*(HW-.04),2.25,z); g.rotation.y=side<0?Math.PI/2:-Math.PI/2; scene.add(g);
+  const frame=mesh(new THREE.BoxGeometry(w+.3,h+.3,.07),std(0x1c1f1e,{roughness:.5}),false); frame.position.z=.035; g.add(frame);
+  const matte=new THREE.Mesh(new THREE.PlaneGeometry(w+.2,h+.2),std(0xfdfbf8)); matte.position.z=.072; g.add(matte);
+  const tex=placeholderTex(i+1,!!(e.video||e.image)); let video=null;
+  const media=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:tex,toneMapped:false})); media.position.z=.074; g.add(media);
+  fitCover(tex,w/h,540/960);
+  if(e.video){
+    video=document.createElement("video"); Object.assign(video,{src:e.video,muted:true,loop:true,playsInline:true,preload:"metadata",crossOrigin:"anonymous"});
+    video.setAttribute("playsinline","");
+    video.addEventListener("loadeddata",()=>{ const vt=new THREE.VideoTexture(video); vt.encoding=THREE.sRGBEncoding; fitCover(vt,w/h,video.videoWidth/video.videoHeight); media.material.map=vt; media.material.needsUpdate=true; },{once:true});
+  } else if(e.image){
+    loadImg(e.image,img=>{ const t=imageTexture(img); fitCover(t,w/h,img.naturalWidth/img.naturalHeight); media.material.map=t; media.material.needsUpdate=true; });
+  }
+  const wash=new THREE.Mesh(new THREE.PlaneGeometry(w+2,h+2.4),new THREE.MeshBasicMaterial({map:washTex,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:.5}));
+  wash.position.set(0,.45,.006); g.add(wash);
+  const lamp=mesh(new THREE.CylinderGeometry(.05,.05,.6,12),std(0x1c1f1e),false); lamp.rotation.z=Math.PI/2; lamp.position.set(0,h/2+.5,.25); g.add(lamp);
+  const plaqueTex=canvasTex(420,260,(x,cw,ch)=>{ x.fillStyle="#fdfbf8"; x.fillRect(0,0,cw,ch);
+    x.fillStyle=ACC_CSS; x.font="700 22px "+MR; x.fillText("ЭКСПОНАТ № "+(i+1),26,48);
+    x.fillStyle=INK_CSS; x.font="32px "+PR; const y=wrap(x,"«"+e.title+"»",26,100,cw-52,38);
+    x.fillStyle=MUTED_CSS; x.font="20px "+MR; wrap(x,e.mat,26,Math.max(160,y+46),cw-52,26); });
+  const plaque=new THREE.Mesh(new THREE.PlaneGeometry(.44,.27),new THREE.MeshBasicMaterial({map:plaqueTex})); plaque.position.set(w/2+.42,-h/2+.22,.02); g.add(plaque);
+  [frame,matte,media,plaque].forEach(m=>{ m.userData.action={type:"exhibit",i}; clickables.push(m); });
+  return {g,video,media,w,h,side,center:new THREE.Vector3(side*(HW-.04),2.25,z),stand:new THREE.Vector3(side*6.05,0,z-side*1.2),face:side*Math.PI/2};
+});
+
+/* wall texts */
+wallText([{t:"Экспонаты этого музея",f:"34px "+PR},{t:"не продаются, не обмениваются",f:"34px "+PR},{t:"и не возвращаются.",f:"34px "+PR}],4.2,1.3,new THREE.Vector3(HW-.03,2.4,-11),-Math.PI/2,{lh:56});
+wallText([{t:"Сеанс начинается,",f:"34px "+PR},{t:"когда все садятся рядом.",f:"34px "+PR}],4.2,1,new THREE.Vector3(-HW+.03,2.4,-11),Math.PI/2,{lh:56});
+wallText([{t:"МУЗЕЙ НАШЕЙ СЕМЬИ · КИНОЗАЛ «МЫ»",f:"700 30px "+MR,c:ACC_CSS}],7,.36,new THREE.Vector3(0,4.72,-HL+.03),0,{lh:40});
+wallText([{t:"НАША СЕМЬЯ",f:"700 26px "+MR,c:ACC_CSS}].concat(FAMILY.map(f=>({t:f.name+" · "+f.role,f:"36px "+PR}))),5,2.5,new THREE.Vector3(-4.6,2.55,HL-.03),Math.PI,{lh:66});
+wallText([{t:"Самое ценное в этом музее",f:"36px "+PR},{t:"висит не на стенах.",f:"36px "+PR},{t:"Оно сейчас смотрит в экран.",f:"36px "+PR,c:ACC_CSS}],5,1.6,new THREE.Vector3(4.6,2.5,HL-.03),Math.PI,{lh:64});
+wallText([{t:"ПРАВИЛА МУЗЕЯ",f:"700 20px "+MR,c:ACC_CSS},{t:"1. Улыбаться можно.",f:"23px "+PR},{t:"2. Обниматься нужно.",f:"23px "+PR},{t:"3. Шуметь разрешается.",f:"23px "+PR},{t:"4. Младших пропускать.",f:"23px "+PR},{t:"5. Уходить не обязательно.",f:"23px "+PR}],1.5,1.7,new THREE.Vector3(-HW+.03,2.2,15.02),Math.PI/2,{lh:48,align:"left"});
+wallText([{t:"ЧАСЫ РАБОТЫ",f:"700 20px "+MR,c:ACC_CSS},{t:"Всегда, пока мы вместе.",f:"23px "+PR},{t:"Выходных нет.",f:"23px "+PR},{t:"Вход: одно объятие.",f:"23px "+PR}],1.5,1.3,new THREE.Vector3(HW-.03,2.2,15.02),-Math.PI/2,{lh:50,align:"left"});
+
+const hs=new THREE.Shape(); hs.moveTo(0,.25); hs.bezierCurveTo(0,.3,-.05,.42,-.22,.42); hs.bezierCurveTo(-.46,.42,-.46,.16,-.46,.16); hs.bezierCurveTo(-.46,0,-.3,-.18,0,-.36); hs.bezierCurveTo(.3,-.18,.46,0,.46,.16); hs.bezierCurveTo(.46,.16,.46,.42,.22,.42); hs.bezierCurveTo(.05,.42,0,.3,0,.25);
+const hg=new THREE.ExtrudeGeometry(hs,{depth:.16,bevelEnabled:true,bevelThickness:.06,bevelSize:.05,bevelSegments:6,curveSegments:24}); hg.center();
+
+/* ---------- details ---------- */
+const obstacles=[{x:0,z:1,r:1.35}];
+const potMat=std(0x2f2a2c,{roughness:.6}), leafMat=std(0x5d7d57,{roughness:.8}), leafMat2=std(0x4a6b47,{roughness:.8});
+[[-7.2,15.2],[7.2,15.2],[-7.2,-15.1],[7.2,-15.1],[-7.3,-8.6],[7.3,-8.6]].forEach(([x,z])=>{
+  const g=new THREE.Group(); g.position.set(x,0,z); scene.add(g);
+  const pot=mesh(new THREE.CylinderGeometry(.3,.23,.55,18),potMat); pot.position.y=.275; g.add(pot);
+  for(let j=0;j<9;j++){ const a=j/9*Math.PI*2, r=j===0?0:.16+Math.random()*.08; const l=mesh(new THREE.SphereGeometry(.2+Math.random()*.08,10,8),j%2?leafMat:leafMat2);
+    l.scale.set(.8,1.5,.8); l.position.set(Math.cos(a)*r,.85+Math.random()*.55+(j===0?.5:0),Math.sin(a)*r); l.rotation.set((Math.random()-.5)*.6,0,(Math.random()-.5)*.6); g.add(l); }
+  obstacles.push({x,z,r:.5});
+});
+const brass=std(0xc9a14a,{metalness:.7,roughness:.32}), ropeMat=std(0x1d5c57,{roughness:.9});
+const posts=[]; for(let j=0;j<6;j++){ const a=j/6*Math.PI*2+Math.PI/6, x=Math.cos(a)*1.25, z=1+Math.sin(a)*1.25;
+  const pst=mesh(new THREE.CylinderGeometry(.03,.04,.92,10),brass); pst.position.set(x,.46,z); scene.add(pst);
+  const top=mesh(new THREE.SphereGeometry(.05,10,8),brass); top.position.set(x,.94,z); scene.add(top);
+  const bs=mesh(new THREE.CylinderGeometry(.13,.15,.04,16),brass); bs.position.set(x,.02,z); scene.add(bs); posts.push(new THREE.Vector3(x,.88,z)); }
+posts.forEach((a,j)=>{ const b=posts[(j+1)%posts.length], m=a.clone().lerp(b,.5); m.y-=.22;
+  const tube=mesh(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(a,m,b),16,.022,8),ropeMat); scene.add(tube); });
+/* autumn leaves on the floor (a nod to the autumn walk photos) */
+{ const leafGeo=new THREE.CircleGeometry(.05,7); leafGeo.scale(1,.6,1);
+  [0xd9a441,0xc8662f,0xe6c06a].forEach((col,ci)=>{
+    const n=60, leaves=new THREE.InstancedMesh(leafGeo,std(col,{roughness:.7,side:THREE.DoubleSide}),n), d=new THREE.Object3D();
+    for(let j=0;j<n;j++){ let x,z; const k=j+ci*n;
+      if(k<100){ const a=Math.random()*Math.PI*2, r=1.5+Math.random()*1.8; x=Math.cos(a)*r; z=1+Math.sin(a)*r; }
+      else if(k<150){ x=(Math.random()-.5)*3.2; z=-8.4-Math.random()*3.4; }
+      else { x=(Math.random()-.5)*1.8; z=14-Math.random()*20; }
+      d.position.set(x,.006+k*.00001,z); d.rotation.set(-Math.PI/2,0,Math.random()*6.3); d.scale.setScalar(.7+Math.random()*.7); d.updateMatrix(); leaves.setMatrixAt(j,d.matrix); }
+    leaves.receiveShadow=true; scene.add(leaves); }); }
+/* cinema rug with a shyrdak-style ram-horn ornament */
+const rugTex=canvasTex(700,392,(x,w,h)=>{
+  x.fillStyle="#8a3326"; x.fillRect(0,0,w,h);
+  x.strokeStyle="#f1e3c8"; x.lineWidth=8; x.strokeRect(16,16,w-32,h-32);
+  x.fillStyle="#1d5c57"; x.fillRect(34,34,w-68,h-68);
+  x.strokeStyle="#f1e3c8"; x.lineWidth=3; x.strokeRect(44,44,w-88,h-88);
+  const horn=(cx,cy,s,rot,col)=>{ x.save(); x.translate(cx,cy); x.rotate(rot); x.scale(s,s); x.strokeStyle=col; x.lineWidth=6; x.lineCap="round"; x.beginPath();
+    x.moveTo(0,20); x.lineTo(0,0); x.arc(-14,0,14,0,Math.PI,true); x.arc(-21,0,7,Math.PI,0,true); x.moveTo(0,0); x.arc(14,0,14,Math.PI,0,false); x.arc(21,0,7,0,Math.PI,false); x.stroke(); x.restore(); };
+  const cx=w/2, cy=h/2;
+  x.save(); x.translate(cx,cy); x.rotate(Math.PI/4); x.fillStyle="#8a3326"; x.fillRect(-34,-34,68,68); x.strokeStyle="#f1e3c8"; x.lineWidth=4; x.strokeRect(-34,-34,68,68); x.restore();
+  [0,1,2,3].forEach(k=>{ const a=k*Math.PI/2; horn(cx+Math.sin(a)*78,cy-Math.cos(a)*78,1.5,a,"#f1e3c8"); });
+  [[90,90,Math.PI*.75],[w-90,90,-Math.PI*.75],[90,h-90,Math.PI*.25],[w-90,h-90,-Math.PI*.25]].forEach(([px,py,r])=>horn(px,py,1.15,r+Math.PI,"#e6b45a"));
+});
+const rug=new THREE.Mesh(new THREE.PlaneGeometry(5,2.8),std(0xffffff,{map:rugTex,roughness:1})); rug.rotation.x=-Math.PI/2; rug.position.set(0,.004,-10); rug.receiveShadow=true; scene.add(rug);
+const balloons=[];
+[[-3.6,3.0,-12.8,0x2a7a73],[-4.3,3.4,-13.4,0xd9a441],[3.6,3.1,-12.8,0xe07a5f],[4.2,3.5,-13.4,0x2a7a73],[-3.1,2.7,-13.6,0xe07a5f],[3.1,2.8,-13.7,0xd9a441]].forEach(([x,y,z,c],j)=>{
+  const b=mesh(hg.clone(),std(c,{roughness:.25,metalness:.15})); b.scale.setScalar(.75); b.position.set(x,y,z); scene.add(b);
+  const str=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,-.3,0),new THREE.Vector3(0,-y+.05,0)]),new THREE.LineBasicMaterial({color:0x8f9592})); b.add(str);
+  balloons.push({b,y,ph:j*1.3}); });
+
+/* ---------- gramophone: the family jukebox ---------- */
+const GRAMO={x:2.3,z:9.6,rot:-.65};
+const gFront=new THREE.Vector3(Math.sin(GRAMO.rot),0,Math.cos(GRAMO.rot));
+const GSTAND=new THREE.Vector3(GRAMO.x+gFront.x*1.25,0,GRAMO.z+gFront.z*1.25);
+const gFace=Math.atan2(GRAMO.x-GSTAND.x,GRAMO.z-GSTAND.z);
+const gramo=(()=>{
+  const g=new THREE.Group(); g.position.set(GRAMO.x,0,GRAMO.z); g.rotation.y=GRAMO.rot; scene.add(g);
+  const wood=std(0x6a4128,{roughness:.55}), dark=std(0x3b2417,{roughness:.6});
+  const plinth=mesh(new THREE.BoxGeometry(.86,.06,.68),dark); plinth.position.y=.03; g.add(plinth);
+  const cab=mesh(new THREE.BoxGeometry(.78,.78,.6),wood); cab.position.y=.45; g.add(cab);
+  const lid=mesh(new THREE.BoxGeometry(.84,.05,.66),dark); lid.position.y=.865; g.add(lid);
+  const plate=new THREE.Mesh(new THREE.PlaneGeometry(.5,.2),new THREE.MeshBasicMaterial({map:canvasTex(320,128,(x,w,h)=>{
+    x.fillStyle="#f5e8cf"; x.fillRect(0,0,w,h); x.strokeStyle="#b98328"; x.lineWidth=4; x.strokeRect(6,6,w-12,h-12);
+    x.textAlign="center"; x.fillStyle=ACC_CSS; x.font="700 22px "+MR; x.fillText("ПРОИГРЫВАТЕЛЬ",w/2,52); x.fillStyle=INK_CSS; x.font="28px "+PR; x.fillText("Песни семьи",w/2,94); })}));
+  plate.position.set(0,.55,.302); g.add(plate);
+  const platter=mesh(new THREE.CylinderGeometry(.25,.25,.025,32),std(0x1c3f3c,{roughness:.9})); platter.position.set(-.06,.9,.02); g.add(platter);
+  const rec=new THREE.Group(); rec.position.set(-.06,.917,.02); g.add(rec);
+  rec.add(mesh(new THREE.CylinderGeometry(.23,.23,.008,40),std(0x161616,{roughness:.35,metalness:.2}),false));
+  const label=mesh(new THREE.CylinderGeometry(.075,.075,.01,24),std(GOLD,{roughness:.5}),false); label.position.y=.002; rec.add(label);
+  const mark=mesh(new THREE.BoxGeometry(.02,.012,.07),std(0xfbf8f4),false); mark.position.set(0,.004,.04); rec.add(mark);
+  const base=mesh(new THREE.CylinderGeometry(.035,.04,.07,12),brass); base.position.set(.27,.92,-.2); g.add(base);
+  const a0=new THREE.Vector3(.27,.95,-.2), a1=new THREE.Vector3(.04,.935,.1), dir=a1.clone().sub(a0);
+  const arm=mesh(new THREE.CylinderGeometry(.012,.012,dir.length(),8),brass,false); arm.position.copy(a0).add(a1).multiplyScalar(.5); arm.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.normalize()); g.add(arm);
+  const pts=[]; for(let i=0;i<=14;i++){ const k=i/14; pts.push(new THREE.Vector2(.035+.3*Math.pow(k,2.6),k*.62)); }
+  const horn=mesh(new THREE.LatheGeometry(pts,36),std(0xd2a64e,{metalness:.65,roughness:.3,side:THREE.DoubleSide})); horn.position.set(.24,.95,-.22); horn.rotation.x=.95; g.add(horn);
+  const joint=mesh(new THREE.SphereGeometry(.05,12,10),brass,false); joint.position.set(.24,.96,-.22); g.add(joint);
+  const hit=new THREE.Mesh(new THREE.SphereGeometry(.75,8,6),new THREE.MeshBasicMaterial({visible:false})); hit.position.y=.8; g.add(hit);
+  g.traverse(m=>{ if(m.isMesh){ m.userData.action={type:"jukebox"}; clickables.push(m); } });
+  const noteTex=canvasTex(64,64,(x,w,h)=>{ x.fillStyle="#c9973f"; x.font="700 46px "+MR; x.textAlign="center"; x.textBaseline="middle"; x.fillText("♪",w/2,h/2+2); });
+  const notes=[0,1,2].map(k=>{ const s=new THREE.Sprite(new THREE.SpriteMaterial({map:noteTex,transparent:true,depthWrite:false,opacity:0})); s.scale.setScalar(.22); g.add(s); return {s,ph:k/3}; });
+  return {g,rec,notes};
+})();
+obstacles.push({x:GRAMO.x,z:GRAMO.z,r:.75});
+
+/* ---------- cinema: slideshow of every photo ---------- */
+const scr=mesh(new THREE.BoxGeometry(6.9,3.95,.08),std(0x1c1f1e,{roughness:.5}),false); scr.position.set(0,2.4,-HL+.04); scene.add(scr);
+const sparks=Array.from({length:18},()=>({x:Math.random(),y:Math.random(),s:.6+Math.random()*1.2,v:.02+Math.random()*.05}));
+const IDLE_SUB="Садитесь на скамейку всей семьёй, и фильм начнётся.", FILM_SUB="Фильм о нас. В главных ролях: вся семья.";
+const filmTex=canvasTex(1024,576,(x,w,h)=>drawTitle(x,w,h,0,IDLE_SUB,1));
+const screen=new THREE.Mesh(new THREE.PlaneGeometry(6.6,3.7),new THREE.MeshBasicMaterial({map:filmTex,toneMapped:false})); screen.position.set(0,2.4,-HL+.085); scene.add(screen);
+const slides=FILM.slides.map(s=>({src:s.src,cap:s.cap,img:null,bg:null}));
+let slidesRequested=false, filmT0=0, lastFilmDraw=-1;
+const SLIDE=6.5, FADE=1.6, INTRO=3.5;
+function coverDraw(x,img,w,h){ const iw=img.naturalWidth, ih=img.naturalHeight, ia=iw/ih, a=w/h; let sw=iw, sh=ih, sx=0, sy=0;
+  if(ia>a){ sw=ih*a; sx=(iw-sw)/2; } else { sh=iw/a; sy=(ih-sh)/2; } x.drawImage(img,sx,sy,sw,sh,0,0,w,h); }
+function blurBg(img){ /* cheap blur that works in every browser: shrink, then stretch back */
+  const sm=document.createElement("canvas"); sm.width=32; sm.height=18; coverDraw(sm.getContext("2d"),img,32,18);
+  const md=document.createElement("canvas"); md.width=128; md.height=72; const mx=md.getContext("2d"); mx.imageSmoothingEnabled=true; mx.drawImage(sm,0,0,128,72);
+  mx.fillStyle="rgba(10,28,26,.5)"; mx.fillRect(0,0,128,72); return md; }
+function requestSlides(){ if(slidesRequested) return; slidesRequested=true; slides.forEach(s=>loadImg(s.src,img=>{ s.img=img; s.bg=blurBg(img); })); }
+function drawTitle(x,w,h,t,sub,alpha){
+  x.globalAlpha=alpha;
+  const g=x.createLinearGradient(0,0,0,h); g.addColorStop(0,"#0f2826"); g.addColorStop(1,"#1d4744"); x.fillStyle=g; x.fillRect(0,0,w,h);
+  sparks.forEach(p=>{ p.y-=p.v*.033; if(p.y<-.05){p.y=1.05;p.x=Math.random();} drawHeart(x,p.x*w,p.y*h,p.s,`rgba(242,205,140,${.16+.12*Math.sin(t+p.x*9)})`); });
+  x.textAlign="center"; x.fillStyle="rgba(242,205,140,.9)"; x.font="700 20px "+MR; x.fillText("МУЗЕЙ НАШЕЙ СЕМЬИ ПРЕДСТАВЛЯЕТ",w/2,h*.36);
+  x.fillStyle="#fbf8f4"; x.font="64px "+PR; x.fillText(FILM.title,w/2,h*.5);
+  x.font="500 26px "+MR; x.fillStyle="rgba(251,248,244,.72)"; x.fillText(sub,w/2,h*.61);
+  x.globalAlpha=1;
+}
+function drawSlide(x,s,p,alpha,k,capA=alpha){
+  if(!s || !s.img) return false;
+  x.globalAlpha=alpha; x.imageSmoothingEnabled=true; x.drawImage(s.bg,0,0,1024,576);
+  const img=s.img, ia=img.naturalWidth/img.naturalHeight, z=1+.065*p, ph=576*.88*z, pw=ph*ia;
+  const dx=(k%2?1:-1)*16*(p-.5), dy=((k%3)-1)*6*(p-.5), px=512-pw/2+dx, py=288-ph/2+dy;
+  x.fillStyle="rgba(0,0,0,.35)"; x.fillRect(px+6,py+10,pw,ph);
+  x.drawImage(img,px,py,pw,ph);
+  const side=Math.max(150,(1024-pw)/2-60);
+  x.globalAlpha=capA; x.textAlign="left"; x.fillStyle="rgba(242,205,140,.95)"; x.font="700 15px "+MR; x.fillText("МУЗЕЙ НАШЕЙ СЕМЬИ",40,456);
+  x.fillStyle="#fbf8f4"; x.font="30px "+PR; wrap(x,s.cap,40,494,side,36);
+  x.globalAlpha=1; return true;
+}
+function drawFilm(t){
+  if(t-lastFilmDraw<1/30) return; lastFilmDraw=t;
+  const {x}=filmTex.userData, w=1024, h=576;
+  if(!sitting){ drawTitle(x,w,h,t,IDLE_SUB,1); filmTex.needsUpdate=true; return; }
+  const el=t-filmT0, n=slides.length;
+  if(el<INTRO){ drawTitle(x,w,h,t,FILM_SUB,1);
+    if(el>INTRO-1) drawSlide(x,slides[0],0,el-(INTRO-1),0); filmTex.needsUpdate=true; return; }
+  const e2=el-INTRO, k=Math.floor(e2/SLIDE)%n, local=e2%SLIDE, p=local/SLIDE;
+  const fa=local>SLIDE-FADE ? (local-(SLIDE-FADE))/FADE : 0, k2=(k+1)%n, nextOk=!!(slides[k2] && slides[k2].img);
+  if(!drawSlide(x,slides[k],p,1,k,nextOk?Math.max(0,1-2*fa):1)) drawTitle(x,w,h,t,FILM_SUB,1);
+  if(fa>0) drawSlide(x,slides[k2],0,fa,k2,Math.max(0,2*fa-1));
+  filmTex.needsUpdate=true;
+}
+drawFilm(0);
+const benchMat=std(0xc9a77f,{roughness:.6});
+const bench=new THREE.Group(); bench.position.set(0,0,-10); scene.add(bench);
+const seat=mesh(new THREE.BoxGeometry(3.4,.09,.52),benchMat); seat.position.y=.44; bench.add(seat);
+[-1.45,0,1.45].forEach(x=>{ const l=mesh(new THREE.BoxGeometry(.08,.4,.46),std(0x2f3534)); l.position.set(x,.2,0); bench.add(l); });
+bench.traverse(m=>{ if(m.isMesh){ m.userData.action={type:"bench"}; clickables.push(m);} });
+screen.userData.action={type:"bench"}; clickables.push(screen);
+
+/* ---------- pedestal: the main treasure ---------- */
+const ped=new THREE.Group(); ped.position.set(0,0,1); scene.add(ped);
+const base=mesh(new THREE.BoxGeometry(.85,1,.85),std(0xfbf9f6)); base.position.y=.5; base.receiveShadow=true; ped.add(base);
+const glass=new THREE.Mesh(new THREE.BoxGeometry(.8,.8,.8),new THREE.MeshStandardMaterial({color:0xffffff,transparent:true,opacity:.12,roughness:.05,depthWrite:false})); glass.position.y=1.4; ped.add(glass);
+const edges=new THREE.LineSegments(new THREE.EdgesGeometry(glass.geometry),new THREE.LineBasicMaterial({color:0xd0cbc4})); edges.position.y=1.4; ped.add(edges);
+const heart=mesh(hg,std(0xd9a441,{roughness:.22,metalness:.55,emissive:0x5a3a08,emissiveIntensity:.55})); heart.position.y=1.4; heart.scale.setScalar(.62); ped.add(heart);
+const velvet=mesh(new THREE.CylinderGeometry(.5,.62,1.05,28,1),std(0x1a4f4a,{roughness:.95,transparent:true})); velvet.position.y=1.5; ped.add(velvet);
+const knot=mesh(new THREE.SphereGeometry(.09,16,12),std(0xc9973f,{metalness:.5,roughness:.35,transparent:true})); knot.position.y=2.07; ped.add(knot);
+const pedPlaque=new THREE.Mesh(new THREE.PlaneGeometry(.62,.36),new THREE.MeshBasicMaterial({map:canvasTex(420,244,(x,cw,ch)=>{ x.fillStyle="#fdfbf8"; x.fillRect(0,0,cw,ch); x.textAlign="center";
+  x.fillStyle=ACC_CSS; x.font="700 22px "+MR; x.fillText("ГЛАВНОЕ СОКРОВИЩЕ",cw/2,56); x.fillStyle=INK_CSS; x.font="36px "+PR; x.fillText("Наша семья",cw/2,120);
+  x.fillStyle=MUTED_CSS; x.font="20px "+MR; x.fillText("Единственная такая в мире",cw/2,178); })}));
+pedPlaque.position.set(0,.72,.431); ped.add(pedPlaque);
+const spot=new THREE.SpotLight(0xffe9dc,.9,12,.35,.6); spot.position.set(0,H-.1,1); spot.target=ped; scene.add(spot);
+const heartGlow=new THREE.PointLight(0xffc46b,0,5); heartGlow.position.set(0,1.6,1.4); scene.add(heartGlow);
+ped.traverse(m=>{ if(m.isMesh){ m.userData.action={type:"pedestal"}; clickables.push(m);} });
+let veilT = unlocked ? 1 : -1;
+if(unlocked){ velvet.visible=knot.visible=false; heartGlow.intensity=1.1; }
+function revealHeart(){ veilT=0; toast("Ура! В центре зала из-под бархата показалось главное сокровище музея.",5200); }
+
+/* ---------- avatars: the family ---------- */
+function avatar(o){
+  const s=o.scale||1, g=new THREE.Group(), body=new THREE.Group(); g.add(body);
+  const skin=std(o.skin,{roughness:.7}), top=std(o.top), pants=std(o.pants), hair=std(o.hair,{roughness:.6}), shoe=std(0x1e1b1c);
+  const cyl=(a,b,h,m)=>mesh(new THREE.CylinderGeometry(a,b,h,14),m);
+  const legs=[], arms=[];
+  [-1,1].forEach(sx=>{
+    const hip=new THREE.Group(); hip.position.set(sx*.09,.9,0); body.add(hip);
+    const up=cyl(.075,.066,.45,pants); up.position.y=-.225; hip.add(up);
+    const knee=new THREE.Group(); knee.position.y=-.45; hip.add(knee);
+    const lo=cyl(.062,.052,.41,pants); lo.position.y=-.205; knee.add(lo);
+    const foot=mesh(new THREE.BoxGeometry(.1,.07,.21),shoe); foot.position.set(0,-.415,.04); knee.add(foot);
+    legs.push({hip,knee});
+  });
+  const pelvis=cyl(.17,.17,.14,pants); pelvis.position.y=.93; body.add(pelvis);
+  const torso=cyl(o.slim?.15:.18,o.slim?.15:.18,.56,top); torso.position.y=1.2; body.add(torso);
+  [-1,1].forEach(sx=>{
+    const sh=new THREE.Group(); sh.position.set(sx*(o.slim?.2:.23),1.42,0); body.add(sh);
+    const ball=mesh(new THREE.SphereGeometry(o.slim?.075:.09,14,10),top); sh.add(ball);
+    const arm=cyl(.055,.047,.5,top); arm.position.y=-.25; sh.add(arm);
+    const hand=mesh(new THREE.SphereGeometry(.05,12,8),skin); hand.position.y=-.52; sh.add(hand);
+    arms.push(sh);
+  });
+  const neck=cyl(.05,.05,.1,skin); neck.position.y=1.52; body.add(neck);
+  const head=new THREE.Group(); head.position.y=1.67; body.add(head);
+  const skull=mesh(new THREE.SphereGeometry(.135,22,16),skin); skull.scale.set(1,1.08,1); head.add(skull);
+  const eyeM=std(0x1a1416);
+  [-1,1].forEach(sx=>{ const e=mesh(new THREE.SphereGeometry(.017,8,6),eyeM,false); e.position.set(sx*.047,.01,.125); head.add(e); });
+  const capM=mesh(new THREE.SphereGeometry(.148,22,16,0,Math.PI*2,0,Math.PI*.56),hair); capM.rotation.x=-.32; capM.position.y=.012; head.add(capM);
+  if(o.long){ const back=mesh(new THREE.BoxGeometry(.29,.46,.09),hair); back.position.set(0,-.16,-.1); head.add(back);
+    const bang=mesh(new THREE.SphereGeometry(.15,18,12,Math.PI*.15,Math.PI*.7,0,Math.PI*.3),hair); bang.rotation.y=Math.PI; bang.rotation.x=.25; head.add(bang); }
+  if(o.kid){ const k=1+(1-s)*.8; head.scale.setScalar(k); head.position.y=1.67+(k-1)*.1; }
+  if(o.crown){ const cm=std(0xd4a43a,{metalness:.6,roughness:.35,side:THREE.DoubleSide});
+    const band=mesh(new THREE.CylinderGeometry(.105,.085,.06,18,1,true),cm,false); band.position.y=.135; head.add(band);
+    for(let j=0;j<5;j++){ const a=j/5*Math.PI*2, c=mesh(new THREE.ConeGeometry(.022,.05,6),cm,false); c.position.set(Math.sin(a)*.1,.19,Math.cos(a)*.1); head.add(c); } }
+  g.scale.setScalar(s);
+  g.userData={legs,arms,body,head,phase:0,amt:0,s,rate:9/Math.sqrt(s)};
+  scene.add(g); return g;
+}
+const mom=avatar({skin:0xeac6aa,top:0xe0a2a8,pants:0x2b2730,hair:0x1f1512,long:true,slim:true});
+const dad=avatar({skin:0xe0b893,top:0xebe6dc,pants:0x34405a,hair:0x18110e});
+const kids=[
+  avatar({scale:.75,kid:true,skin:0xe6bf9e,top:0x2f5d8a,pants:0x3a3f4a,hair:0x18110e}),   // Алинур
+  avatar({scale:.65,kid:true,skin:0xe8c3a3,top:0xd9822b,pants:0x44506a,hair:0x1c1411}),   // Нурэмир
+  avatar({scale:.55,kid:true,skin:0xe9c5a6,top:0x4c9a6a,pants:0x6b5a45,hair:0x1c1411})    // Нурсултан
+];
+const baby=avatar({scale:.42,kid:true,crown:true,skin:0xefcfb2,top:0x9cc3e6,pants:0xb9a47f,hair:0x2a1c14}); // Асад, на руках у папы
+dad.userData.body.add(baby); baby.userData.sitting=true; dad.userData.carry=true;
+function babyPose(onLap){ if(onLap){ baby.position.set(0,.6,.28); baby.rotation.set(0,0,0); } else { baby.position.set(.19,.62,.17); baby.rotation.set(0,.25,0); } }
+babyPose(false);
+const walkers=[{a:mom,r:.3},{a:dad,r:.33,gap:1.0},{a:kids[0],r:.25,gap:.85},{a:kids[1],r:.22,gap:.75},{a:kids[2],r:.2,gap:.68}];
+[[.3,12.2],[-.5,13.0],[.35,13.65],[-.4,14.2],[.3,14.7]].forEach(([x,z],k)=>{ walkers[k].a.position.set(x,0,z); walkers[k].a.rotation.y=Math.PI; walkers[k].speed=0; });
+function animate(a,moving,dt,t,speed=2.8){
+  const u=a.userData; u.amt+=((moving?1:0)-u.amt)*Math.min(1,dt*8); u.phase+=dt*(moving?u.rate*Math.min(1.25,Math.max(.55,speed/2.8)):0);
+  const s=Math.sin(u.phase)*u.amt;
+  if(u.sitting){
+    u.legs.forEach(l=>{l.hip.rotation.x=-Math.PI/2; l.knee.rotation.x=Math.PI/2;});
+    u.arms.forEach((sh,i)=>sh.rotation.set(u.carry?-.72:-.5,0,(i?-1:1)*(u.carry?.38:.05)));
+    u.body.position.y=Math.sin(t*1.6)*.004; return;
+  }
+  u.legs[0].hip.rotation.x=s*.55; u.legs[1].hip.rotation.x=-s*.55;
+  u.legs[0].knee.rotation.x=Math.max(0,-Math.sin(u.phase))*.8*u.amt; u.legs[1].knee.rotation.x=Math.max(0,Math.sin(u.phase))*.8*u.amt;
+  u.arms[0].rotation.set(-s*.5,0,0); u.arms[1].rotation.set(s*.5,0,0);
+  if(u.carry) u.arms[1].rotation.set(-.62,0,-.2);
+  u.body.position.y=Math.abs(Math.cos(u.phase))*.035*u.amt+Math.sin(t*2)*.004;
+}
+
+/* ---------- floating hearts ---------- */
+const heartSpriteTex=canvasTex(64,64,(x,w,h)=>drawHeart(x,w/2,h/2+2,2.4,"#e2a23e"));
+const particles=Array.from({length:36},()=>{ const s=new THREE.Sprite(new THREE.SpriteMaterial({map:heartSpriteTex,transparent:true,depthWrite:false,opacity:0})); s.scale.setScalar(.16); s.visible=false; scene.add(s); return {s,life:0,max:1,vy:0,ox:0}; });
+function emit(pos,spread){ const p=particles.find(p=>p.life<=0); if(!p) return; p.life=p.max=2+Math.random()*1.6; p.vy=.35+Math.random()*.35; p.ox=Math.random()*6;
+  p.s.position.set(pos.x+(Math.random()-.5)*spread,pos.y+Math.random()*.3,pos.z+(Math.random()-.5)*spread); p.s.scale.setScalar(.1+Math.random()*.12); p.s.visible=true; }
+function updateParticles(dt,t){ particles.forEach(p=>{ if(p.life<=0) return; p.life-=dt; p.s.position.y+=p.vy*dt; p.s.position.x+=Math.sin(t*2+p.ox)*.003;
+  const k=p.life/p.max; p.s.material.opacity=Math.min(1,(1-k)*4)*Math.min(1,k*2)*.9; if(p.life<=0) p.s.visible=false; }); }
+
+/* ---------- movement ---------- */
+let yaw=0, camDist=5.6, target=null, onArrive=null, stuckT=0;
+const keys=new Set(), joyV={x:0,y:0};
+const ringMat=new THREE.MeshBasicMaterial({color:ACC,transparent:true,opacity:0});
+const ring=new THREE.Mesh(new THREE.RingGeometry(.18,.24,32),ringMat); ring.rotation.x=-Math.PI/2; ring.position.y=.01; scene.add(ring);
+function collide(p){
+  p.x=Math.max(-HW+.5,Math.min(HW-.5,p.x)); p.z=Math.max(-HL+.7,Math.min(HL-.6,p.z));
+  for(const o of obstacles){ const dx=p.x-o.x, dz=p.z-o.z, d=Math.hypot(dx,dz); if(d<o.r){ const k=o.r/(d||1e-3); p.x=o.x+dx*k; p.z=o.z+dz*k; } }
+  const bx=2.0, bz=.55, cx=Math.max(-bx,Math.min(bx,p.x)), cz=Math.max(-10-bz,Math.min(-10+bz,p.z)), ex=p.x-cx, ez=p.z-cz, e=Math.hypot(ex,ez);
+  if(e<.25){ if(e>1e-4){ p.x=cx+ex/e*.25; p.z=cz+ez/e*.25; } else { p.z = p.z>-10 ? -10+bz+.25 : -10-bz-.25; } }
+}
+let park=null;   // where the family stands while mom looks at an exhibit
+function walkTo(v,cb){ target=new THREE.Vector3(v.x,0,v.z); collide(target); onArrive=cb||null; stuckT=0; park=null; ring.position.set(target.x,.01,target.z); ringMat.opacity=.9; }
+function turnTo(obj,ang,dt,k=10){ let d=ang-obj.rotation.y; d=Math.atan2(Math.sin(d),Math.cos(d)); obj.rotation.y+=d*Math.min(1,dt*k); }
+let faceGoal=null;
+const PARK=[.9,1.6,2.22,2.8];
+function setPark(i){
+  const o=exhibitObjs[i], s=o.side, sz=o.stand.z, dir=-s;
+  const along=Math.abs(sz+dir*PARK[PARK.length-1])<HL-.9;
+  park=walkers.slice(1).map((w,k)=>{ const x=along?s*(6.0-.12*k):s*(6.05-.75*(k+1)), z=along?sz+dir*PARK[k]:sz+dir*.25;
+    return {x,z,face:Math.atan2(o.center.x-x,o.center.z-z)}; });
+}
+/* followers: each keeps a gentle distance behind the one in front (or walks to a parking spot) */
+function stepFamily(dt){
+  for(let k=1;k<walkers.length;k++){
+    const w=walkers[k], a=w.a, p=a.position, lead=walkers[k-1].a.position;
+    let gx=p.x, gz=p.z;
+    if(park){ gx=park[k-1].x; gz=park[k-1].z; }
+    else { const dx=p.x-lead.x, dz=p.z-lead.z, d=Math.hypot(dx,dz); if(d>w.gap){ gx=lead.x+dx/d*w.gap; gz=lead.z+dz/d*w.gap; } }
+    const ex=gx-p.x, ez=gz-p.z, ed=Math.hypot(ex,ez);
+    w.speed=0;
+    if(ed>.05){ const sp=Math.min(3.6,ed*4.2), st=Math.min(ed,sp*dt); p.x+=ex/ed*st; p.z+=ez/ed*st; w.speed=sp; if(ed>.12) turnTo(a,Math.atan2(ex,ez),dt,8); }
+    else if(park) turnTo(a,park[k-1].face,dt,5);
+    else turnTo(a,Math.atan2(lead.x-p.x,lead.z-p.z),dt,2.5);
+  }
+  for(let i=0;i<walkers.length;i++) for(let j=i+1;j<walkers.length;j++){
+    const A=walkers[i].a.position, B=walkers[j].a.position, dx=B.x-A.x, dz=B.z-A.z, d=Math.hypot(dx,dz)||1e-4, m=walkers[i].r+walkers[j].r+.08;
+    if(d<m){ const push=m-d, nx=dx/d, nz=dz/d;
+      if(i===0){ B.x+=nx*push; B.z+=nz*push; } else { A.x-=nx*push/2; A.z-=nz*push/2; B.x+=nx*push/2; B.z+=nz*push/2; } }
+  }
+  for(let k=1;k<walkers.length;k++) collide(walkers[k].a.position);
+}
+
+/* ---------- sitting: the whole family on the bench ---------- */
+let camSit=0;
+const SEATS=[.38,-.28,.98,-.9,-1.38];               // mom, dad, Алинур, Нурэмир, Нурсултан
+const STANDUP=[[.7,-8.85],[-.6,-8.85],[1.5,-8.4],[-1.4,-8.4],[-.2,-8.0]];
+function sit(){
+  if(sitting) return; sitting=true; target=null; park=null;
+  walkers.forEach((w,k)=>{ const a=w.a, s=a.userData.s; a.position.set(SEATS[k],.5-.9*s,s<1?-10.24+.45*s:-10.02); a.rotation.set(0,Math.PI,0); a.userData.sitting=true; });
+  mom.userData.body.rotation.z=-.06; mom.userData.head.rotation.z=-.16; babyPose(true);
+  $("standBtn").hidden=false; $("prompt").hidden=true; $("hint").style.opacity=0;
+  markSeen(EXHIBITS.length);
+  filmT0=clock.elapsedTime; lastFilmDraw=-1; requestSlides();
+  if(songState[FILM.song]==="missing") toast("Песня для фильма скоро появится. Пока звучит музыкальная шкатулка.",4200);
+  else { audioInit(); playSong(FILM.song,{film:true}); }
+}
+function stand(){
+  if(!sitting) return; sitting=false;
+  walkers.forEach((w,k)=>{ w.a.userData.sitting=false; w.a.position.set(STANDUP[k][0],0,STANDUP[k][1]); });
+  mom.userData.body.rotation.z=0; mom.userData.head.rotation.z=0; babyPose(false);
+  $("standBtn").hidden=true; $("soundBtn").hidden=true;
+  if(songOn && songFilm) stopSong(); else restoreMusic();
+}
+$("standBtn").onclick=stand;
+$("soundBtn").onclick=()=>{ $("soundBtn").hidden=true; if(sitting){ audioInit(); playSong(FILM.song,{film:true}); } };
+
+/* ---------- love notes ---------- */
+let found=new Set(); try{ JSON.parse(localStorage.getItem("muzey-semya-notes")||"[]").forEach(x=>found.add(x)); }catch(e){}
+const paperMat=std(0xfdfbf8,{roughness:.7}), sealMat=std(GOLD,{roughness:.3,metalness:.45,emissive:0x4a3008,emissiveIntensity:.4});
+const hitMat=new THREE.MeshBasicMaterial({visible:false});
+const noteObjs=NOTES.map((n,i)=>{
+  const g=new THREE.Group(); g.position.set(...n.pos); scene.add(g);
+  const env=mesh(new THREE.BoxGeometry(.28,.18,.02),paperMat); g.add(env);
+  const flap=mesh(new THREE.ConeGeometry(.16,.1,3),paperMat,false); flap.rotation.set(Math.PI/2,0,Math.PI); flap.scale.set(1,1,.08); flap.position.set(0,.045,.012); g.add(flap);
+  const seal=mesh(hg,sealMat,false); seal.scale.setScalar(.09); seal.position.set(0,0,.03); g.add(seal);
+  const glow=new THREE.Sprite(new THREE.SpriteMaterial({map:heartSpriteTex,transparent:true,depthWrite:false,opacity:.8})); glow.scale.setScalar(.2); glow.position.y=.3; g.add(glow);
+  const hit=new THREE.Mesh(new THREE.SphereGeometry(.42,8,6),hitMat); g.add(hit);
+  [env,seal,hit].forEach(m=>{ m.userData.action={type:"note",i}; clickables.push(m); });
+  g.visible=!found.has(i); g.userData={glow,base:n.pos[1],ph:i*.9};
+  return g;
+});
+function renderNotes(){ $("notesChip").textContent=`Записки: ${found.size} из ${NOTES.length}`; }
+renderNotes();
+function openNote(i){
+  $("nNo").textContent=`Записка № ${i+1} из ${NOTES.length} · за что мы любим ${NOTES[i].to}`; $("nText").textContent=NOTES[i].text;
+  $("note").hidden=false; openModal="note"; $("nClose").focus({preventScroll:true});
+  if(!found.has(i)){ found.add(i); try{ localStorage.setItem("muzey-semya-notes",JSON.stringify([...found])); }catch(e){} }
+  for(let k=0;k<10;k++) setTimeout(()=>emit(noteObjs[i].position.clone().setY(.6),.5),k*70);
+  noteObjs[i].visible=false; renderNotes();
+}
+$("nClose").onclick=()=>{ $("note").hidden=true; openModal=null;
+  if(found.size===NOTES.length) toast(`Все ${NOTES.length} записок найдены. Любви в этой семье ещё больше, чем тут написано.`,5200);
+  else toast(`Найдено записок: ${found.size} из ${NOTES.length}. Остальные спрятаны где-то в зале.`); };
+$("note").addEventListener("click",e=>{ if(e.target.id==="note") $("nClose").click(); });
+
+/* ---------- close-up view of an exhibit ---------- */
+let inspSound=true;
+function updSound(){ $("iSound").textContent="Звук: "+(inspSound?"вкл":"выкл"); }
+function enterInspect(i){
+  const e=EXHIBITS[i], o=exhibitObjs[i]; inspect=i; faceGoal=o.face; setPark(i);
+  $("iNo").textContent=`${hallName(e.who)} · экспонат ${i+1} из ${EXHIBITS.length}`; $("iTitle").textContent="«"+e.title+"»";
+  $("iMeta").textContent=e.mat+" · "+e.date; $("iText").textContent=e.text+" "+(e.guide||"");
+  $("iSound").hidden=!o.video;
+  $("inspect").hidden=false; $("prompt").hidden=true; $("joy").hidden=true; $("hint").style.opacity=0;
+  if(o.video){ if(inspSound && songOn) stopSong(true); duckMusic(); o.video.currentTime=0; o.video.muted=!inspSound; o.video.play().catch(()=>{ o.video.muted=true; inspSound=false; updSound(); o.video.play().catch(()=>{}); }); }
+  updSound(); renderSongs(); markSeen(i);
+}
+function exitInspect(){
+  if(inspect===null) return; const o=exhibitObjs[inspect]; if(o.video) o.video.muted=true;
+  inspect=null; $("inspect").hidden=true; if(coarse) $("joy").hidden=false; nearKey="?"; restoreMusic();
+}
+function gotoExhibit(i){
+  i=(i+EXHIBITS.length)%EXHIBITS.length;
+  if(inspect!==null){ const p=exhibitObjs[inspect]; if(p.video) p.video.muted=true; inspect=null; $("inspect").hidden=true; }
+  walkTo(exhibitObjs[i].stand,()=>enterInspect(i));
+}
+$("iPrev").onclick=()=>gotoExhibit((inspect??0)-1);
+$("iNext").onclick=()=>gotoExhibit((inspect??-1)+1);
+$("iExit").onclick=exitInspect;
+$("iSong").onclick=()=>{ if(inspect!==null) toggleSong(EXHIBITS[inspect].who); };
+$("iFull").onclick=()=>{ const i=inspect; if(i===null) return; const o=exhibitObjs[i]; if(o.video) o.video.muted=true; openExhibit(i); };
+$("iSound").onclick=()=>{ inspSound=!inspSound; updSound(); if(inspect!==null){ const v=exhibitObjs[inspect].video; if(v){ if(inspSound && songOn) stopSong(true); v.muted=!inspSound; v.play().catch(()=>{}); } } };
+$("tourBtn").onclick=()=>{ if(sitting) stand(); const i=EXHIBITS.findIndex((_,k)=>!seen.has(k)); gotoExhibit(i<0?0:i); toast("Экскурсия началась. Стрелки внизу ведут к следующему экспонату."); };
+let fp=false;
+$("viewBtn").onclick=()=>{ fp=!fp; $("viewBtn").setAttribute("aria-pressed",fp); $("viewBtn").textContent=fp?"Вид со стороны":"Глазами мамы"; if(fp){ fpPitch=0; toast("Теперь ты смотришь глазами мамы. Тяни экран, чтобы оглядеться."); } };
+let fpPitch=0, pitch=.4;
+
+/* ---------- actions ---------- */
+function act(a){
+  if(sitting && a.type!=="bench") stand();
+  if(a.type!=="exhibit") exitInspect();
+  if(a.type==="exhibit"){ if(inspect===a.i) return; gotoExhibit(a.i); }
+  else if(a.type==="note"){ const n=noteObjs[a.i], d=Math.hypot(mom.position.x-n.position.x,mom.position.z-n.position.z);
+    if(d<1.7) openNote(a.i); else { const v=new THREE.Vector3(n.position.x*.88,0,n.position.z>0?n.position.z-.6:n.position.z+.6); walkTo(v,()=>openNote(a.i)); } }
+  else if(a.type==="bench"){ if(!sitting) walkTo(new THREE.Vector3(0,0,-9.1),sit); }
+  else if(a.type==="jukebox"){ const d=Math.hypot(mom.position.x-GSTAND.x,mom.position.z-GSTAND.z);
+    if(d<1.3){ faceGoal=gFace; openJukebox(); } else walkTo(GSTAND,()=>{ faceGoal=gFace; setTimeout(()=>{ if(openModal===null) openJukebox(); },250); }); }
+  else if(a.type==="pedestal"){ walkTo(new THREE.Vector3(0,0,2.45),()=>{ faceGoal=Math.PI; setTimeout(()=>{
+      if(unlocked && veilT>=1) openFinal(); else if(unlocked) toast("Бархат поднимается…");
+      else { const n=TOTAL-seen.size; toast(`Главное сокровище пока под бархатом. Осмотри ещё ${n} ${plural(n,"экспонат","экспоната","экспонатов")}.`); } },350); }); }
+}
+
+/* ---------- modals ---------- */
+function openExhibit(i){
+  const e=EXHIBITS[i]; modalIdx=i;
+  $("mNo").textContent="Экспонат № "+(i+1); $("mTitle").textContent="«"+e.title+"»"; $("mHall").textContent=hallName(e.who); $("mMat").textContent=e.mat; $("mDate").textContent=e.date; $("mText").textContent=e.text; $("mGuide").textContent=e.guide||"";
+  const box=$("mMedia"); box.innerHTML="";
+  if(e.video){ const v=document.createElement("video"); v.src=e.video; v.controls=true; v.playsInline=true; v.setAttribute("playsinline",""); v.loop=true; box.appendChild(v);
+    if(songOn) stopSong(true); duckMusic(); v.play().catch(()=>{ v.muted=true; v.play().catch(()=>{}); }); }
+  else if(e.image){ const im=new Image(); im.src=e.image; im.alt=e.title; box.appendChild(im); }
+  else box.innerHTML=`<div class="ph"><svg viewBox="0 0 24 24"><path fill="#e2a23e" d="${heartPath}"/></svg><b>Экспонат готовится</b><span>Совсем скоро здесь появится фото. Смотритель музея уже несёт его в зал.</span></div>`;
+  $("modal").hidden=false; openModal="modal"; renderSongs(); $("mClose").focus({preventScroll:true});
+  markSeen(i);
+}
+function closeExhibit(){ $("mMedia").innerHTML=""; $("modal").hidden=true; openModal=null; modalIdx=null; if(inspect!==null){ const v=exhibitObjs[inspect].video; if(v){ v.muted=!inspSound; v.play().catch(()=>{}); } } else restoreMusic(); }
+$("mClose").onclick=closeExhibit;
+$("mSong").onclick=()=>{ if(modalIdx!==null) toggleSong(EXHIBITS[modalIdx].who); };
+$("modal").addEventListener("click",e=>{ if(e.target.id==="modal") closeExhibit(); });
+function openFinal(){ $("final").hidden=false; openModal="final"; renderSongs(); for(let k=0;k<20;k++) setTimeout(()=>emit(new THREE.Vector3(0,1.6,1),1.2),k*60); $("fClose").focus({preventScroll:true});
+  audioInit();
+  if(!songOn && songState.semya!=="missing") playSong("semya",{auto:true});
+  else if(!songOn && actx && !musicOn){ musicWanted=true; setMusic(true); } }
+$("fClose").onclick=()=>{ $("final").hidden=true; openModal=null; };
+addEventListener("keydown",e=>{ if(e.key==="Escape"){ if(openModal==="modal") closeExhibit(); else if(openModal==="final") $("fClose").click(); else if(openModal==="note") $("nClose").click(); else if(openModal==="jukebox") closeJukebox(); else exitInspect(); } });
+
+/* ---------- input ---------- */
+const ray=new THREE.Raycaster(), ndc=new THREE.Vector2();
+let down=null; const pts=new Map(); let pinchD=0;
+const pdist=()=>{ const [a,b]=[...pts.values()]; return Math.hypot(a.x-b.x,a.y-b.y); };
+canvas.addEventListener("pointerdown",e=>{ pts.set(e.pointerId,{x:e.clientX,y:e.clientY}); canvas.setPointerCapture(e.pointerId);
+  if(pts.size===2){ pinchD=pdist(); if(down) down.drag=true; } else down={x:e.clientX,y:e.clientY,lx:e.clientX,ly:e.clientY,drag:false,id:e.pointerId}; });
+canvas.addEventListener("pointermove",e=>{
+  if(pts.has(e.pointerId)) pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pts.size>=2){ const d=pdist(); if(pinchD>0 && d>0){ camDist=Math.max(1.8,Math.min(10,camDist*pinchD/d)); } pinchD=d; return; }
+  if(!down || down.id!==e.pointerId) return;
+  if(!down.drag && Math.hypot(e.clientX-down.x,e.clientY-down.y)>9) down.drag=true;
+  if(down.drag && !sitting && inspect===null){ yaw-=(e.clientX-down.lx)*.006;
+    if(fp) fpPitch=Math.max(-.75,Math.min(.75,fpPitch-(e.clientY-down.ly)*.004)); else pitch=Math.max(.06,Math.min(1.25,pitch+(e.clientY-down.ly)*.004)); }
+  down.lx=e.clientX; down.ly=e.clientY;
+});
+const ptrEnd=e=>{ pts.delete(e.pointerId); if(pts.size<2) pinchD=0; };
+canvas.addEventListener("pointercancel",e=>{ ptrEnd(e); down=null; });
+canvas.addEventListener("pointerup",e=>{
+  ptrEnd(e);
+  if(!down || down.id!==e.pointerId) return; const wasDrag=down.drag; down=null; if(wasDrag || !entered) return;
+  ndc.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1); ray.setFromCamera(ndc,camera);
+  const hit=ray.intersectObjects(clickables,false)[0];
+  if(hit){ act(hit.object.userData.action); return; }
+  const f=ray.intersectObject(floor)[0]; if(f && !sitting){ exitInspect(); walkTo(f.point,null); }
+});
+canvas.addEventListener("wheel",e=>{ camDist=Math.max(1.8,Math.min(10,camDist*(1+e.deltaY*.0012))); },{passive:true});
+addEventListener("keydown",e=>{ const k=e.key.toLowerCase(); if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright","ц","ф","ы","в"].includes(k)){ keys.add(k); if(sitting && openModal===null) stand(); } });
+addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
+addEventListener("blur",()=>keys.clear());
+const coarse=matchMedia("(pointer:coarse)").matches;
+if(coarse){ document.body.classList.add("coarse"); $("joy").hidden=false; $("hint").textContent="Ходи джойстиком или нажимай на пол, семья идёт следом. Тяни экран, чтобы осмотреться. Нажми на фото, чтобы подойти."; }
+(function(){ const j=$("joy"), kb=$("knob"); let jid=null, cx=0, cy=0;
+  j.addEventListener("pointerdown",e=>{ e.stopPropagation(); jid=e.pointerId; j.setPointerCapture(jid); const r=j.getBoundingClientRect(); cx=r.left+r.width/2; cy=r.top+r.height/2; move(e); if(sitting) stand(); });
+  j.addEventListener("pointermove",e=>{ if(e.pointerId===jid) move(e); });
+  const end=e=>{ if(e.pointerId!==jid) return; jid=null; joyV.x=joyV.y=0; kb.style.transform=""; };
+  j.addEventListener("pointerup",end); j.addEventListener("pointercancel",end);
+  function move(e){ let dx=e.clientX-cx, dy=e.clientY-cy; const d=Math.hypot(dx,dy), m=40; if(d>m){dx*=m/d;dy*=m/d;} kb.style.transform=`translate(${dx}px,${dy}px)`; joyV.x=dx/m; joyV.y=dy/m; target=null; }
+})();
+$("prompt").onclick=()=>{ if(nearAct) act(nearAct); };
+
+/* ---------- enter ---------- */
+$("enterBtn").onclick=()=>{
+  entered=true; $("intro").hidden=true; audioInit(); if(actx){ musicWanted=true; setMusic(true); }
+  /* unlock the song player inside this tap, so the cinema can start its song later (iOS) */
+  try{ songEl.src=SILENT; const p=songEl.play(); if(p && p.then) p.then(()=>{ if(!songOn) songEl.pause(); }).catch(()=>{}); }catch(e){}
+  setTimeout(()=>toast("Добро пожаловать в музей нашей семьи. Мама ведёт, все остальные идут следом.",5000),600);
+  setTimeout(()=>{ $("hint").style.opacity=0; },14000);
+};
+
+/* ---------- loop ---------- */
+const clock=new THREE.Clock(); let nearAct=null, nearKey="", tick=0;
+const camPos=new THREE.Vector3(0,3.4,19), camLook=new THREE.Vector3(0,1.3,8);
+camera.position.copy(camPos);
+const tmp=new THREE.Vector3();
+function loop(){
+  const dt=Math.min(clock.getDelta(),.05), t=clock.elapsedTime;
+  // input
+  let mx=0,mz=0;
+  if(keys.has("w")||keys.has("arrowup")||keys.has("ц")) mz-=1; if(keys.has("s")||keys.has("arrowdown")||keys.has("ы")) mz+=1;
+  if(keys.has("a")||keys.has("arrowleft")||keys.has("ф")) mx-=1; if(keys.has("d")||keys.has("arrowright")||keys.has("в")) mx+=1;
+  mx+=joyV.x; mz+=joyV.y;
+  let vx=0,vz=0;
+  if(inspect!==null && openModal===null && Math.hypot(mx,mz)>.08) exitInspect();
+  if(!sitting && entered && openModal===null){
+    if(Math.hypot(mx,mz)>.08){ target=null; onArrive=null; park=null; ringMat.opacity=0; const fx=-Math.sin(yaw), fz=-Math.cos(yaw), rx=Math.cos(yaw), rz=-Math.sin(yaw); vx=(fx*-mz+rx*mx); vz=(fz*-mz+rz*mx); const l=Math.hypot(vx,vz); if(l>1){vx/=l;vz/=l;} vx*=2.8; vz*=2.8; }
+    else if(target){ const dx=target.x-mom.position.x, dz=target.z-mom.position.z, d=Math.hypot(dx,dz);
+      if(d<.12 || stuckT>1.4){ target=null; ringMat.opacity=0; const cb=onArrive; onArrive=null; if(cb) cb(); }
+      else { const sp=Math.min(2.8,d*4); vx=dx/d*sp; vz=dz/d*sp; } }
+  }
+  const momSpeed=Math.hypot(vx,vz), momMoving=momSpeed>.05;
+  if(!sitting){
+    const before=mom.position.clone();
+    mom.position.x+=vx*dt; mom.position.z+=vz*dt; collide(mom.position);
+    if(target && mom.position.distanceTo(before)<dt*.4) stuckT+=dt; else stuckT=0;
+    if(momMoving){ turnTo(mom,Math.atan2(vx,vz),dt); faceGoal=null; } else if(faceGoal!==null) turnTo(mom,faceGoal,dt,8); else if(fp) turnTo(mom,Math.atan2(-Math.sin(yaw),-Math.cos(yaw)),dt,10);
+    stepFamily(dt);
+    animate(mom,momMoving,dt,t,momSpeed);
+    for(let k=1;k<walkers.length;k++) animate(walkers[k].a,walkers[k].speed>.3,dt,t,walkers[k].speed);
+  } else walkers.forEach(w=>animate(w.a,false,dt,t));
+  animate(baby,false,dt,t); baby.userData.head.rotation.y=Math.sin(t*.7)*.45;
+  // camera
+  camSit+=((sitting?1:0)-camSit)*Math.min(1,dt*2.2);
+  const follow=tmp.set(mom.position.x+Math.sin(yaw)*camDist*Math.cos(pitch),1.4+camDist*Math.sin(pitch),mom.position.z+Math.cos(yaw)*camDist*Math.cos(pitch));
+  follow.x=Math.max(-HW+.3,Math.min(HW-.3,follow.x)); follow.z=Math.max(-HL+.3,Math.min(HL-.3,follow.z)); follow.y=Math.min(H-.3,follow.y);
+  const sitPos=new THREE.Vector3(0,1.75,-5.6);
+  let want, wantLook, rate=5;
+  if(!entered){ want=new THREE.Vector3(Math.sin(t*.15)*3,3.2,18.5); wantLook=new THREE.Vector3(0,1.6,0); rate=1.5; }
+  else if(inspect!==null){ const o=exhibitObjs[inspect], tf=Math.tan(camera.fov*Math.PI/360), portrait=camera.aspect<1;
+    const dV=(o.h+(portrait?1.6:.8))/(2*tf), dH=(o.w+1.5)/(2*tf*camera.aspect), dd=Math.max(1.3,Math.min(5,Math.max(dV,dH)));
+    const c=o.center.clone(); c.z+=o.side*.3; const lift=portrait?.55:.3;
+    want=c.clone().add(new THREE.Vector3(-o.side*dd,-lift*.4,0)); wantLook=c.clone().add(new THREE.Vector3(0,-lift,0)); rate=3; }
+  else if(fp && !sitting){ const head=new THREE.Vector3(mom.position.x,1.55,mom.position.z), dir=new THREE.Vector3(-Math.sin(yaw)*Math.cos(fpPitch),Math.sin(fpPitch),-Math.cos(yaw)*Math.cos(fpPitch));
+    want=head.clone().addScaledVector(dir,.12); wantLook=head.clone().add(dir); rate=14; }
+  else { want=follow.clone().lerp(sitPos,camSit); wantLook=new THREE.Vector3(mom.position.x,1.15,mom.position.z).lerp(new THREE.Vector3(0,2.2,-16),camSit); }
+  mom.visible=!(fp && !sitting && inspect===null && entered);
+  const k=1-Math.exp(-dt*rate); camPos.lerp(want,k); camLook.lerp(wantLook,k);
+  camera.position.copy(camPos); camera.lookAt(camLook);
+  // world
+  noteObjs.forEach(g=>{ if(!g.visible) return; const u=g.userData; g.position.y=u.base+Math.sin(t*2+u.ph)*.05; g.rotation.y=Math.sin(t*.8+u.ph)*.6; u.glow.material.opacity=.55+.4*Math.sin(t*3+u.ph); });
+  balloons.forEach(o=>{ o.b.position.y=o.y+Math.sin(t*1.1+o.ph)*.08; o.b.rotation.y=Math.sin(t*.6+o.ph)*.4; });
+  heart.rotation.y=t*.8; heart.position.y=1.4+Math.sin(t*1.5)*.04;
+  if(veilT>=0 && veilT<1){ veilT=Math.min(1,veilT+dt*.35); const e=veilT*veilT; velvet.position.y=1.5+e*2.2; knot.position.y=2.07+e*2.2; velvet.material.opacity=knot.material.opacity=1-veilT; heartGlow.intensity=veilT*1.1;
+    if(Math.random()<.5) emit(new THREE.Vector3(0,1.4,1),.9); if(veilT>=1){ velvet.visible=knot.visible=false; } }
+  if(unlocked && veilT>=1 && Math.random()<dt*2.2) emit(new THREE.Vector3(0,1.5,1),.7);
+  if(sitting && Math.random()<dt*2) emit(new THREE.Vector3(0,1.4,-10.1),.5);
+  if(gramoPlaying) gramo.rec.rotation.y-=dt*3.5;
+  gramo.notes.forEach(n=>{ const ph=(t*.35+n.ph)%1; n.s.position.set(.24+Math.sin(ph*6+n.ph*9)*.12,1.45+ph*.9,.2); n.s.material.opacity=gramoPlaying?Math.sin(ph*Math.PI)*.9:Math.max(0,n.s.material.opacity-dt); });
+  updateParticles(dt,t);
+  if(ringMat.opacity>0){ ring.scale.setScalar(1+Math.sin(t*6)*.08); }
+  if(sitting || mom.position.z<-3) drawFilm(t);
+  if(mom.position.z<-2) requestSlides();
+  // proximity (4×/s)
+  tick+=dt; if(tick>.25){ tick=0; updateNear(); updateVideos(); }
+  renderer.render(scene,camera);
+  requestAnimationFrame(loop);
+}
+function updateNear(){
+  let best=null, bd=1e9;
+  if(entered && !sitting && openModal===null && inspect===null){
+    const P=mom.position;
+    noteObjs.forEach((n,i)=>{ if(!n.visible) return; const d=Math.hypot(P.x-n.position.x,P.z-n.position.z); if(d<1.7 && d-0.5<bd){bd=d-0.5;best={type:"note",i};} });
+    exhibitObjs.forEach((o,i)=>{ const d=Math.hypot(P.x-o.stand.x,P.z-o.stand.z); if(d<2.2 && d<bd){bd=d;best={type:"exhibit",i};} });
+    const db=Math.hypot(P.x,P.z+9.2); if(db<2.4 && db<bd){bd=db;best={type:"bench"};}
+    const dp=Math.hypot(P.x,P.z-2.3); if(dp<2 && dp<bd){bd=dp;best={type:"pedestal"};}
+    const dg=Math.hypot(P.x-GSTAND.x,P.z-GSTAND.z); if(dg<1.9 && dg<bd){bd=dg;best={type:"jukebox"};}
+  }
+  const key=(best?JSON.stringify(best):"")+(target?"*":""); if(key===nearKey) return; nearKey=key; nearAct=best;
+  const p=$("prompt");
+  if(!best || target){ p.hidden=true; return; }
+  p.textContent = best.type==="note" ? "Прочитать записку" : best.type==="exhibit" ? `Подойти к «${EXHIBITS[best.i].title}»` : best.type==="bench" ? "Сесть всей семьёй и смотреть фильм" : best.type==="jukebox" ? "Открыть семейный проигрыватель" : (unlocked ? "Открыть главное сокровище" : "Что под бархатом?");
+  p.hidden=false;
+}
+function updateVideos(){
+  const ranked=exhibitObjs.filter(o=>o.video).map(o=>({o,d:Math.hypot(mom.position.x-o.stand.x,mom.position.z-o.stand.z)})).sort((a,b)=>a.d-b.d);
+  ranked.forEach(({o,d},k)=>{ const near=inspect!==null ? o===exhibitObjs[inspect] && openModal===null : (entered && !sitting && openModal===null && d<7.5 && k<3);
+    if(near){ if(o.video.preload!=="auto") o.video.preload="auto"; if(o.video.paused) o.video.play().catch(()=>{}); } else if(!o.video.paused) o.video.pause(); });
+}
+(document.fonts ? Promise.race([Promise.all(["34px Prata","44px Prata","500 26px Manrope","700 22px Manrope","700 20px Manrope","20px Manrope"].map(f=>document.fonts.load(f,"Музей"))),new Promise(r=>setTimeout(r,3000))]) : Promise.resolve()).then(()=>{
+  // redraw text textures after fonts arrive
+  scene.traverse(m=>{ if(m.material && m.material.map && m.material.map.userData && m.material.map.userData.redraw) m.material.map.userData.redraw(); });
+});
+requestAnimationFrame(loop);
+})();
+</script>
+
+</body>
+</html>
